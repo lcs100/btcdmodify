@@ -15,6 +15,7 @@ import (
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/cpu"
 	"github.com/btcsuite/btcd/mining"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
@@ -190,6 +191,9 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 
 	// The block was accepted.
 	coinbaseTx := block.MsgBlock().Transactions[0].TxOut[0]
+
+	cpu.TotalEnergy += cpu.EnergyPerBlock
+	log.Infof("block energy is:%d", cpu.TotalEnergy)
 	log.Infof("Block submitted via CPU miner accepted (hash %s, "+
 		"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
 	return true
@@ -205,7 +209,7 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 // stale block such as a new block showing up or periodically when there are
 // new transactions and enough time has elapsed without finding a solution.
 func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
-	ticker *time.Ticker, quit chan struct{}, msgProof *wire.MsgProof) bool {
+	ticker *time.Ticker, quit chan struct{}) bool {
 
 	// Choose a random extra nonce offset for this block template and
 	// worker.
@@ -224,6 +228,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 	lastGenerated := time.Now()
 	lastTxUpdate := m.g.TxSource().LastUpdated()
 	hashesCompleted := uint64(0)
+	begin := float64(time.Now().UnixNano())
+	count := float64(0)
 
 	// Note that the entire extra nonce range is iterated and the offset is
 	// added relying on the fact that overflow will wrap around 0 as
@@ -238,6 +244,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// periodically checking for early quit and stale block
 		// conditions along with updates to the speed monitor.
 		for i := uint32(0); i <= maxNonce; i++ {
+			count += 1
 			select {
 			case <-quit:
 				return false
@@ -281,6 +288,10 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			// than the target difficulty.  Yay!
 			if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 				m.updateHashes <- hashesCompleted
+				end := float64(time.Now().UnixNano())
+				cpu.EnergyPerBlock = count * ((end - begin) / 1e9)
+				count = 0
+				log.Infof("cpu capability: %d", cpu.EnergyPerBlock)
 				return true
 			}
 		}
@@ -341,7 +352,7 @@ out:
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-		template, proofTemplate, err := m.g.NewBlockTemplate(payToAddr)
+		template, err := m.g.NewBlockTemplate(payToAddr)
 		m.submitBlockLock.Unlock()
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to create new block "+
@@ -354,7 +365,7 @@ out:
 		// with false when conditions that trigger a stale block, so
 		// a new block template can be generated.  When the return is
 		// true a solution was found, so submit the solved block.
-		if m.solveBlock(template.Block, curHeight+1, ticker, quit, proofTemplate.Proof) {
+		if m.solveBlock(template.Block, curHeight+1, ticker, quit) {
 			block := btcutil.NewBlock(template.Block)
 			m.submitBlock(block)
 		}

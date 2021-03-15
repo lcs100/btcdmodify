@@ -446,7 +446,7 @@ func NewBlkTmplGenerator(policy *Policy, params *chaincfg.Params,
 //  |  transactions (while block size   |   |
 //  |  <= policy.BlockMinSize)          |   |
 //   -----------------------------------  --
-func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*BlockTemplate, *ProofTemplate, error) {
+func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*BlockTemplate, error) {
 	// Extend the most recently known best block.
 	best := g.chain.BestSnapshot()
 	nextBlockHeight := best.Height + 1
@@ -462,12 +462,12 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 	extraNonce := uint64(0)
 	coinbaseScript, err := standardCoinbaseScript(nextBlockHeight, extraNonce)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	coinbaseTx, err := createCoinbaseTx(g.chainParams, coinbaseScript,
 		nextBlockHeight, payToAddress)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	coinbaseSigOpCost := int64(blockchain.CountSigOps(coinbaseTx)) * blockchain.WitnessScaleFactor
 
@@ -614,7 +614,7 @@ mempoolLoop:
 	// OP_RETURN output in the coinbase transaction.
 	segwitState, err := g.chain.ThresholdState(chaincfg.DeploymentSegwit)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	segwitActive := segwitState == blockchain.ThresholdActive
 
@@ -851,14 +851,14 @@ mempoolLoop:
 	ts := medianAdjustedTime(best, g.timeSource) // timestamp
 	reqDifficulty, err := g.chain.CalcNextRequiredDifficulty(ts)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Calculate the next expected block version based on the state of the
 	// rule change deployments.
 	nextBlockVersion, err := g.chain.CalcNextBlockVersion()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Create a new block ready to be solved.
@@ -873,7 +873,7 @@ mempoolLoop:
 	}
 	for _, tx := range blockTxns {
 		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -885,7 +885,7 @@ mempoolLoop:
 	}
 	for _, tx := range blockTxns {
 		if err := msgProof.AddTransaction(tx.MsgTx()); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -895,7 +895,7 @@ mempoolLoop:
 	block := btcutil.NewBlock(&msgBlock)
 	block.SetHeight(nextBlockHeight)
 	if err := g.chain.CheckConnectBlockTemplate(block); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	log.Debugf("Created new block template (%d transactions, %d in "+
@@ -904,16 +904,13 @@ mempoolLoop:
 		blockWeight, blockchain.CompactToBig(msgBlock.Header.Bits))
 
 	return &BlockTemplate{
-			Block:             &msgBlock,
-			Fees:              txFees,
-			SigOpCosts:        txSigOpCosts,
-			Height:            nextBlockHeight,
-			ValidPayAddress:   payToAddress != nil,
-			WitnessCommitment: witnessCommitment,
-		}, &ProofTemplate{
-			Proof:           &msgProof,
-			ValidPayAddress: payToAddress != nil,
-		}, err
+		Block:             &msgBlock,
+		Fees:              txFees,
+		SigOpCosts:        txSigOpCosts,
+		Height:            nextBlockHeight,
+		ValidPayAddress:   payToAddress != nil,
+		WitnessCommitment: witnessCommitment,
+	}, err
 }
 
 // UpdateBlockTime updates the timestamp in the header of the passed block to
