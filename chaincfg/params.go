@@ -515,7 +515,7 @@ var SimNetParams = Params{
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
 	PowLimit:                 simNetPowLimit,
-	PowLimitBits:             0x190000ff,
+	PowLimitBits:             0x1f0000ff,
 	BIP0034Height:            0, // Always active on simnet
 	BIP0065Height:            0, // Always active on simnet
 	BIP0066Height:            0, // Always active on simnet
