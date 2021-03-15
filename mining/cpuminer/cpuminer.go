@@ -290,6 +290,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 				m.updateHashes <- hashesCompleted
 				end := float64(time.Now().UnixNano())
 				cpu.EnergyPerBlock = count * ((end - begin) / 1e9)
+				log.Infof("%d", count)
 				count = 0
 				log.Infof("cpu capability: %d", cpu.EnergyPerBlock)
 				return true
