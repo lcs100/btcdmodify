@@ -245,7 +245,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// conditions along with updates to the speed monitor.
 		for i := uint32(0); i <= maxNonce; i++ {
 			count += 1
-			log.Infof("%d", count)
 			select {
 			case <-quit:
 				return false
