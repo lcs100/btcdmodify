@@ -7,6 +7,7 @@ package main
 
 import (
 	"bytes"
+	"container/list"
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/binary"
@@ -27,6 +28,7 @@ import (
 	"github.com/btcsuite/btcd/blockchain/indexers"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/committee"
 	"github.com/btcsuite/btcd/connmgr"
 	"github.com/btcsuite/btcd/database"
 	"github.com/btcsuite/btcd/mempool"
@@ -582,6 +584,24 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	// thread and therefore blocks further messages until
 	// the bitcoin block has been fully processed.
 	sp.server.syncManager.QueueBlock(block, sp.Peer, sp.blockProcessed)
+
+	for i := committee.CommitteeList.Front(); i != nil; i = i.Next() {
+		if i.Value == sp.Peer.Addr() {
+			break
+		}
+	}
+
+	committee.Mutex.Lock()
+	committee.CommitteeList.PushBack(sp.Peer.Addr())
+	committee.Mutex.Unlock()
+
+	// release all elements
+	var next *list.Element
+	for i := committee.CommitteeList.Front(); i != nil; i = next {
+		next = i.Next()
+		committee.CommitteeList.Remove(i)
+	}
+
 	<-sp.blockProcessed
 }
 
