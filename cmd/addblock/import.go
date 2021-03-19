@@ -129,7 +129,7 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 
 	// Ensure the blocks follows all of the chain rules and match up to the
 	// known checkpoints.
-	isMainChain, isOrphan, err := bi.chain.ProcessBlock(block,
+	isMainChain, isOrphan, isProof, err := bi.chain.ProcessBlock(block,
 		blockchain.BFFastAdd)
 	if err != nil {
 		return false, err
@@ -140,7 +140,11 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	}
 	if isOrphan {
 		return false, fmt.Errorf("import file contains an orphan "+
-			"block: %v", blockHash)
+		"block: %v", blockHash)
+	}
+	if isProof {
+		return false, fmt.Errorf("import file contains an proof "+
+		"block: %v", blockHash)
 	}
 
 	return true, nil

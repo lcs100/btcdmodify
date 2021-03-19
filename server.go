@@ -585,16 +585,6 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	// the bitcoin block has been fully processed.
 	sp.server.syncManager.QueueBlock(block, sp.Peer, sp.blockProcessed)
 
-	for i := committee.CommitteeList.Front(); i != nil; i = i.Next() {
-		if i.Value == sp.Peer.Addr() {
-			break
-		}
-	}
-
-	committee.Mutex.Lock()
-	committee.CommitteeList.PushBack(sp.Peer.Addr())
-	committee.Mutex.Unlock()
-
 	// release all elements
 	var next *list.Element
 	for i := committee.CommitteeList.Front(); i != nil; i = next {
@@ -602,10 +592,18 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 		committee.CommitteeList.Remove(i)
 	}
 
-	isProof := <-sp.blockProcesse
+	isProof := <-sp.blockProcessed
 	if isProof {
 		if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
+			committee.Mutex.Lock()
 			//update committee list
+			for i := committee.CommitteeList.Front(); i != nil; i = i.Next() {
+				if i.Value == sp.Peer.Addr() {
+					return
+				}
+			}
+			committee.CommitteeList.PushBack(sp.Peer.Addr())
+			committee.Mutex.Unlock()
 		}
 	} else {
 		if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
@@ -621,6 +619,8 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 				sp.server.cpuMiner.Awaken()
 			} else if sp.server.cpuMiner.MinerState() == chaincfg.MINING2 {
 				sp.server.cpuMiner.Restore()
+
+				// clear
 			} else if sp.server.cpuMiner.MinerState() == chaincfg.SLEEP {
 				sp.server.cpuMiner.Awaken()
 			}

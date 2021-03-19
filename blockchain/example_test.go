@@ -59,7 +59,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// cause an error by trying to process the genesis block which already
 	// exists.
 	genesisBlock := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
-	isMainChain, isOrphan, err := chain.ProcessBlock(genesisBlock,
+	isMainChain, isOrphan, isProof, err := chain.ProcessBlock(genesisBlock,
 		blockchain.BFNone)
 	if err != nil {
 		fmt.Printf("Failed to process block: %v\n", err)
@@ -67,6 +67,7 @@ func ExampleBlockChain_ProcessBlock() {
 	}
 	fmt.Printf("Block accepted. Is it on the main chain?: %v", isMainChain)
 	fmt.Printf("Block accepted. Is it an orphan?: %v", isOrphan)
+	fmt.Printf("Block accepted. Is it an proof?: %v", isProof)
 
 	// Output:
 	// Failed to process block: already have block 000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f
