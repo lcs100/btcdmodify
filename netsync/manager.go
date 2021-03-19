@@ -661,6 +661,8 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 
+	log.Infof("asdfasdf %s:", bmsg.block.Hash())
+
 	behaviorFlags := blockchain.BFNone
 	_, isOrphan, isProof, err := sm.chain.ProcessBlock(bmsg.block, behaviorFlags)
 	if err != nil {
@@ -1361,14 +1363,14 @@ out:
 				if err != nil {
 					msg.reply <- processBlockResponse{
 						isOrphan: false,
-						isProof: false,
+						isProof:  false,
 						err:      err,
 					}
 				}
 
 				msg.reply <- processBlockResponse{
 					isOrphan: isOrphan,
-					isProof: isProof,
+					isProof:  isProof,
 					err:      nil,
 				}
 

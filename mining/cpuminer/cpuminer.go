@@ -198,6 +198,8 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 	coinbaseTx := block.MsgBlock().Transactions[0].TxOut[0]
 	log.Infof("Block submitted via CPU miner accepted (hash %s, "+
 		"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+
+	time.Sleep(time.Duration(2) * time.Second)
 	return true
 }
 
@@ -741,7 +743,7 @@ func New(cfg *Config) *CPUMiner {
 		minerState:        cfg.MinerState,
 		g:                 cfg.BlockTemplateGenerator,
 		cfg:               *cfg,
-		numWorkers:        defaultNumWorkers,
+		numWorkers:        1,
 		updateNumWorkers:  make(chan struct{}),
 		queryHashesPerSec: make(chan float64),
 		updateHashes:      make(chan uint64),

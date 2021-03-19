@@ -13,6 +13,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"runtime"
@@ -593,6 +594,10 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	}
 
 	isProof := <-sp.blockProcessed
+
+	log.Printf("block hash: %s", block.Hash().String())
+	time.Sleep(time.Duration(2) * time.Second)
+
 	if isProof {
 		if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
 			committee.Mutex.Lock()
