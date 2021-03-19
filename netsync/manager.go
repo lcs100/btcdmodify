@@ -662,6 +662,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 	}
 
 	log.Infof("asdfasdf %s:", bmsg.block.Hash())
+	time.Sleep(time.Duration(2) * time.Second)
 
 	behaviorFlags := blockchain.BFNone
 	_, isOrphan, isProof, err := sm.chain.ProcessBlock(bmsg.block, behaviorFlags)
