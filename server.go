@@ -585,8 +585,10 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	// thread and therefore blocks further messages until
 	// the bitcoin block has been fully processed.
 	sp.server.syncManager.QueueBlock(block, sp.Peer, sp.blockProcessed)
+	<-sp.blockProcessed
 
 	// release all elements
+	/*
 	var next *list.Element
 	for i := committee.CommitteeList.Front(); i != nil; i = next {
 		next = i.Next()
@@ -631,6 +633,7 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 			}
 		}
 	}
+	*/
 }
 
 // OnInv is invoked when a peer receives an inv bitcoin message and is
