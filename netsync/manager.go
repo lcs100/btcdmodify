@@ -62,7 +62,7 @@ type newPeerMsg struct {
 type blockMsg struct {
 	block *btcutil.Block
 	peer  *peerpkg.Peer
-	reply chan struct{}
+	reply chan bool
 }
 
 // invMsg packages a bitcoin inv message and the peer it came from together
@@ -109,6 +109,7 @@ type getSyncPeerMsg struct {
 // processBlockMsg.
 type processBlockResponse struct {
 	isOrphan bool
+	isProof  bool
 	err      error
 }
 
@@ -651,12 +652,23 @@ func (sm *SyncManager) current() bool {
 }
 
 // handleBlockMsg handles block messages from all peers.
-func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
+// the return value indicates whether or not a block is a proof
+func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 	peer := bmsg.peer
 	state, exists := sm.peerStates[peer]
 	if !exists {
 		log.Warnf("Received block message from unknown peer %s", peer)
-		return
+		return false
+	}
+
+	behaviorFlags := blockchain.BFNone
+	_, isOrphan, isProof, err := sm.chain.ProcessBlock(bmsg.block, behaviorFlags)
+	if err != nil {
+		log.Warnf("Failed in processing block %v", bmsg.block.Hash())
+		return false
+	}
+	if isProof {
+		return true
 	}
 
 	// If we didn't ask for this block then the peer is misbehaving.
@@ -671,7 +683,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 			log.Warnf("Got unrequested block %v from %s -- "+
 				"disconnecting", blockHash, peer.Addr())
 			peer.Disconnect()
-			return
+			return false
 		}
 	}
 
@@ -683,7 +695,6 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	// since it is needed to verify the next round of headers links
 	// properly.
 	isCheckpointBlock := false
-	behaviorFlags := blockchain.BFNone
 	if sm.headersFirstMode {
 		firstNodeEl := sm.headerList.Front()
 		if firstNodeEl != nil {
@@ -707,7 +718,6 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 
 	// Process the block to include validation, best chain selection, orphan
 	// handling, etc.
-	_, isOrphan, err := sm.chain.ProcessBlock(bmsg.block, behaviorFlags)
 	if err != nil {
 		// When the error is a rule error, it means the block was simply
 		// rejected as opposed to something actually going wrong, so log
@@ -729,7 +739,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		// send it.
 		code, reason := mempool.ErrToRejectErr(err)
 		peer.PushRejectMsg(wire.CmdBlock, code, reason, blockHash, false)
-		return
+		return false
 	}
 
 	// Meta-data about the new block this peer is reporting. We use this
@@ -807,7 +817,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 
 	// Nothing more to do if we aren't in headers-first mode.
 	if !sm.headersFirstMode {
-		return
+		return false
 	}
 
 	// This is headers-first mode, so if the block is not a checkpoint
@@ -818,7 +828,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 			len(state.requestedBlocks) < minInFlightBlocks {
 			sm.fetchHeaderBlocks()
 		}
-		return
+		return false
 	}
 
 	// This is headers-first mode and the block is a checkpoint.  When
@@ -834,12 +844,12 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		if err != nil {
 			log.Warnf("Failed to send getheaders message to "+
 				"peer %s: %v", peer.Addr(), err)
-			return
+			return false
 		}
 		log.Infof("Downloading headers for blocks %d to %d from "+
 			"peer %s", prevHeight+1, sm.nextCheckpoint.Height,
 			sm.syncPeer.Addr())
-		return
+		return false
 	}
 
 	// This is headers-first mode, the block is a checkpoint, and there are
@@ -853,8 +863,9 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	if err != nil {
 		log.Warnf("Failed to send getblocks message to peer %s: %v",
 			peer.Addr(), err)
-		return
+		return false
 	}
+	return false
 }
 
 // fetchHeaderBlocks creates and sends a request to the syncPeer for the next
@@ -1322,8 +1333,8 @@ out:
 				msg.reply <- struct{}{}
 
 			case *blockMsg:
-				sm.handleBlockMsg(msg)
-				msg.reply <- struct{}{}
+				isProof := sm.handleBlockMsg(msg)
+				msg.reply <- isProof
 
 			case *invMsg:
 				sm.handleInvMsg(msg)
@@ -1345,17 +1356,19 @@ out:
 				msg.reply <- peerID
 
 			case processBlockMsg:
-				_, isOrphan, err := sm.chain.ProcessBlock(
+				_, isOrphan, isProof, err := sm.chain.ProcessBlock(
 					msg.block, msg.flags)
 				if err != nil {
 					msg.reply <- processBlockResponse{
 						isOrphan: false,
+						isProof: false,
 						err:      err,
 					}
 				}
 
 				msg.reply <- processBlockResponse{
 					isOrphan: isOrphan,
+					isProof: isProof,
 					err:      nil,
 				}
 
@@ -1498,10 +1511,10 @@ func (sm *SyncManager) QueueTx(tx *btcutil.Tx, peer *peerpkg.Peer, done chan str
 // QueueBlock adds the passed block message and peer to the block handling
 // queue. Responds to the done channel argument after the block message is
 // processed.
-func (sm *SyncManager) QueueBlock(block *btcutil.Block, peer *peerpkg.Peer, done chan struct{}) {
+func (sm *SyncManager) QueueBlock(block *btcutil.Block, peer *peerpkg.Peer, done chan bool) {
 	// Don't accept more blocks if we're shutting down.
 	if atomic.LoadInt32(&sm.shutdown) != 0 {
-		done <- struct{}{}
+		done <- false
 		return
 	}
 

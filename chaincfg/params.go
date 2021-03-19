@@ -15,6 +15,22 @@ import (
 	"github.com/btcsuite/btcd/wire"
 )
 
+// These variables are the server types and states
+var (
+	//server type
+	STRONG = true
+	WEAK   = false
+
+	//server state
+	NEW     int32 = -1
+	WAIT    int32 = -2
+	SLEEP   int32 = -3
+	STOP    int32 = -4
+	MINING1 int32 = 0
+	MINING2 int32 = 1 // n = 1
+	MINED   int32 = 2
+)
+
 // These variables are the chain proof-of-work limit parameters for each default
 // network.
 var (
@@ -515,14 +531,14 @@ var SimNetParams = Params{
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
 	PowLimit:                 simNetPowLimit,
-	PowLimitBits:             0x1d00ffff,
+	PowLimitBits:             0x207fffff,
 	BIP0034Height:            0, // Always active on simnet
 	BIP0065Height:            0, // Always active on simnet
 	BIP0066Height:            0, // Always active on simnet
 	CoinbaseMaturity:         100,
 	SubsidyReductionInterval: 210000,
 	TargetTimespan:           time.Hour * 24 * 14, // 14 days
-	TargetTimePerBlock:       time.Minute * 1,     // 10 minutes
+	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
 	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
 	ReduceMinDifficulty:      true,
 	MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2

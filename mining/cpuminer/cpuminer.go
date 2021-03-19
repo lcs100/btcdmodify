@@ -10,12 +10,12 @@ import (
 	"math/rand"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/cpu"
 	"github.com/btcsuite/btcd/mining"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
@@ -81,7 +81,9 @@ type Config struct {
 	// This is useful because there is no point in mining if the chain is
 	// not current since any solved blocks would be on a side chain and and
 	// up orphaned anyways.
-	IsCurrent func() bool
+	IsCurrent  func() bool
+	MinerType  bool
+	MinerState int32
 }
 
 // CPUMiner provides facilities for solving blocks (mining) using the CPU in
@@ -92,6 +94,8 @@ type Config struct {
 // system which is typically sufficient.
 type CPUMiner struct {
 	sync.Mutex
+	minerType         bool
+	minerState        int32
 	g                 *mining.BlkTmplGenerator
 	cfg               Config
 	numWorkers        uint32
@@ -104,6 +108,7 @@ type CPUMiner struct {
 	queryHashesPerSec chan float64
 	updateHashes      chan uint64
 	speedMonitorQuit  chan struct{}
+	stateChange       chan int32
 	quit              chan struct{}
 }
 
@@ -191,9 +196,6 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 
 	// The block was accepted.
 	coinbaseTx := block.MsgBlock().Transactions[0].TxOut[0]
-
-	cpu.TotalEnergy += cpu.EnergyPerBlock
-	log.Infof("block energy is:%d", cpu.TotalEnergy)
 	log.Infof("Block submitted via CPU miner accepted (hash %s, "+
 		"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
 	return true
@@ -228,8 +230,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 	lastGenerated := time.Now()
 	lastTxUpdate := m.g.TxSource().LastUpdated()
 	hashesCompleted := uint64(0)
-	begin := float64(time.Now().UnixNano())
-	count := float64(0)
 
 	// Note that the entire extra nonce range is iterated and the offset is
 	// added relying on the fact that overflow will wrap around 0 as
@@ -244,7 +244,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// periodically checking for early quit and stale block
 		// conditions along with updates to the speed monitor.
 		for i := uint32(0); i <= maxNonce; i++ {
-			count += 1
 			select {
 			case <-quit:
 				return false
@@ -288,11 +287,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			// than the target difficulty.  Yay!
 			if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 				m.updateHashes <- hashesCompleted
-				end := float64(time.Now().UnixNano())
-				cpu.EnergyPerBlock = count * ((end - begin) / 1e9)
-				log.Infof("%d", count)
-				count = 0
-				log.Infof("cpu capability: %d", cpu.EnergyPerBlock)
 				return true
 			}
 		}
@@ -369,6 +363,7 @@ out:
 		if m.solveBlock(template.Block, curHeight+1, ticker, quit) {
 			block := btcutil.NewBlock(template.Block)
 			m.submitBlock(block)
+			//commit state change
 		}
 	}
 
@@ -423,6 +418,41 @@ out:
 				runningWorkers = runningWorkers[:i]
 			}
 
+		case state := <-m.stateChange:
+			switch state {
+			case chaincfg.SLEEP:
+				launchWorkers(m.numWorkers)
+
+			case chaincfg.WAIT:
+				launchWorkers(m.numWorkers)
+
+			case chaincfg.MINING1:
+				for _, quit := range runningWorkers {
+					close(quit)
+				}
+
+			case chaincfg.MINING2:
+				for _, quit := range runningWorkers {
+					close(quit)
+				}
+				launchWorkers(m.numWorkers)
+
+			case chaincfg.MINED:
+				if m.minerType == chaincfg.STRONG {
+					if m.minerState == chaincfg.MINING1 {
+						m.Sleep()
+					}
+				} else {
+					if m.minerState == chaincfg.MINING1 {
+						m.Wait()
+					} else if m.minerState == chaincfg.MINING2 {
+						m.Restore()
+					}
+				}
+
+			default:
+			}
+
 		case <-m.quit:
 			for _, quit := range runningWorkers {
 				close(quit)
@@ -460,6 +490,7 @@ func (m *CPUMiner) Start() {
 	go m.miningWorkerController()
 
 	m.started = true
+	atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 	log.Infof("CPU miner started")
 }
 
@@ -481,7 +512,69 @@ func (m *CPUMiner) Stop() {
 	close(m.quit)
 	m.wg.Wait()
 	m.started = false
+	atomic.StoreInt32(&m.minerState, chaincfg.STOP)
 	log.Infof("CPU miner stopped")
+}
+
+func (m *CPUMiner) Sleep() {
+	m.Lock()
+	defer m.Unlock()
+
+	if m.minerState == chaincfg.MINING1 {
+		//sleep
+		m.stateChange <- chaincfg.MINING1
+		atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
+	}
+}
+
+func (m *CPUMiner) Awaken() {
+	m.Lock()
+	defer m.Unlock()
+
+	if m.minerState == chaincfg.SLEEP {
+		//awaken
+		m.stateChange <- chaincfg.SLEEP
+		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
+	} else if m.minerState == chaincfg.WAIT {
+		m.stateChange <- chaincfg.WAIT
+		atomic.StoreInt32(&m.minerState, chaincfg.MINING2)
+	}
+}
+
+func (m *CPUMiner) Wait() {
+	m.Lock()
+	defer m.Unlock()
+
+	if m.minerState == chaincfg.MINING1 {
+		//give up mining2 period and start mining1
+		m.stateChange <- chaincfg.MINING1
+		atomic.StoreInt32(&m.minerState, chaincfg.WAIT)
+	}
+}
+
+func (m *CPUMiner) Restore() {
+	m.Lock()
+	defer m.Unlock()
+
+	if m.minerState == chaincfg.MINING2 {
+		//give up mining2 period and start mining1
+		m.stateChange <- chaincfg.MINING2
+		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
+	}
+}
+
+func (m *CPUMiner) MinerType() bool {
+	m.Lock()
+	defer m.Unlock()
+
+	return m.minerType
+}
+
+func (m *CPUMiner) MinerState() int32 {
+	m.Lock()
+	defer m.Unlock()
+
+	return m.minerState
 }
 
 // IsMining returns whether or not the CPU miner has been started and is
@@ -644,6 +737,8 @@ func (m *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 // type for more details.
 func New(cfg *Config) *CPUMiner {
 	return &CPUMiner{
+		minerType:         cfg.MinerType,
+		minerState:        cfg.MinerState,
 		g:                 cfg.BlockTemplateGenerator,
 		cfg:               *cfg,
 		numWorkers:        defaultNumWorkers,

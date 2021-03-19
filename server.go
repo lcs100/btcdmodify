@@ -281,7 +281,7 @@ type serverPeer struct {
 	quit           chan struct{}
 	// The following chans are used to sync blockmanager and server.
 	txProcessed    chan struct{}
-	blockProcessed chan struct{}
+	blockProcessed chan bool
 }
 
 // newServerPeer returns a new serverPeer instance. The peer needs to be set by
@@ -294,7 +294,7 @@ func newServerPeer(s *server, isPersistent bool) *serverPeer {
 		knownAddresses: make(map[string]struct{}),
 		quit:           make(chan struct{}),
 		txProcessed:    make(chan struct{}, 1),
-		blockProcessed: make(chan struct{}, 1),
+		blockProcessed: make(chan bool, 1),
 	}
 }
 
@@ -602,7 +602,30 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 		committee.CommitteeList.Remove(i)
 	}
 
-	<-sp.blockProcessed
+	isProof := <-sp.blockProcesse
+	if isProof {
+		if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
+			//update committee list
+		}
+	} else {
+		if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
+			if sp.server.cpuMiner.MinerState() == chaincfg.MINING1 {
+				sp.server.cpuMiner.Sleep()
+			} else if sp.server.cpuMiner.MinerState() == chaincfg.SLEEP {
+				sp.server.cpuMiner.Awaken()
+			}
+		} else {
+			if sp.server.cpuMiner.MinerState() == chaincfg.MINING1 {
+				sp.server.cpuMiner.Sleep()
+			} else if sp.server.cpuMiner.MinerState() == chaincfg.WAIT {
+				sp.server.cpuMiner.Awaken()
+			} else if sp.server.cpuMiner.MinerState() == chaincfg.MINING2 {
+				sp.server.cpuMiner.Restore()
+			} else if sp.server.cpuMiner.MinerState() == chaincfg.SLEEP {
+				sp.server.cpuMiner.Awaken()
+			}
+		}
+	}
 }
 
 // OnInv is invoked when a peer receives an inv bitcoin message and is
@@ -2850,6 +2873,8 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		ProcessBlock:           s.syncManager.ProcessBlock,
 		ConnectedCount:         s.ConnectedCount,
 		IsCurrent:              s.syncManager.IsCurrent,
+		MinerType:              chaincfg.STRONG,
+		MinerState:             chaincfg.NEW,
 	})
 
 	// Only setup a function to return new addresses to connect to when

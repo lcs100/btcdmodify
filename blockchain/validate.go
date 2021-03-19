@@ -304,20 +304,20 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 // The flags modify the behavior of this function as follows:
 //  - BFNoPoWCheck: The check to ensure the block hash is less than the target
 //    difficulty is not performed.
-func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags BehaviorFlags) error {
+func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags BehaviorFlags) (bool, error) {
 	// The target difficulty must be larger than zero.
 	target := CompactToBig(header.Bits)
 	if target.Sign() <= 0 {
 		str := fmt.Sprintf("block target difficulty of %064x is too low",
 			target)
-		return ruleError(ErrUnexpectedDifficulty, str)
+		return false, ruleError(ErrUnexpectedDifficulty, str)
 	}
 
 	// The target difficulty must be less than the maximum allowed.
 	if target.Cmp(powLimit) > 0 {
 		str := fmt.Sprintf("block target difficulty of %064x is "+
 			"higher than max of %064x", target, powLimit)
-		return ruleError(ErrUnexpectedDifficulty, str)
+		return false, ruleError(ErrUnexpectedDifficulty, str)
 	}
 
 	// The block hash must be less than the claimed target unless the flag
@@ -326,20 +326,25 @@ func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags Behavio
 		// The block hash must be less than the claimed target.
 		hash := header.BlockHash()
 		hashNum := HashToBig(&hash)
-		if hashNum.Cmp(target) > 0 {
+
+		var proofTarget big.Int
+		//proofTarget = target * ratio
+
+		if hashNum.Cmp(&proofTarget) > 0 {
 			str := fmt.Sprintf("block hash of %064x is higher than "+
 				"expected max of %064x", hashNum, target)
-			return ruleError(ErrHighHash, str)
+			return false, ruleError(ErrHighHash, str)
+		} else if hashNum.Cmp(target) > 0 {
+			return true, nil
 		}
 	}
-
-	return nil
+	return false, nil
 }
 
 // CheckProofOfWork ensures the block header bits which indicate the target
 // difficulty is in min/max range and that the block hash is less than the
 // target difficulty as claimed.
-func CheckProofOfWork(block *btcutil.Block, powLimit *big.Int) error {
+func CheckProofOfWork(block *btcutil.Block, powLimit *big.Int) (bool, error) {
 	return checkProofOfWork(&block.MsgBlock().Header, powLimit, BFNone)
 }
 
@@ -427,13 +432,13 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkProofOfWork.
-func checkBlockHeaderSanity(header *wire.BlockHeader, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
+func checkBlockHeaderSanity(header *wire.BlockHeader, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) (bool, error) {
 	// Ensure the proof of work bits in the block header is in min/max range
 	// and the block hash is less than the target value described by the
 	// bits.
-	err := checkProofOfWork(header, powLimit, flags)
+	isProof, err := checkProofOfWork(header, powLimit, flags)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// A block timestamp must not have a greater precision than one second.
@@ -444,7 +449,7 @@ func checkBlockHeaderSanity(header *wire.BlockHeader, powLimit *big.Int, timeSou
 	if !header.Timestamp.Equal(time.Unix(header.Timestamp.Unix(), 0)) {
 		str := fmt.Sprintf("block timestamp of %v has a higher "+
 			"precision than one second", header.Timestamp)
-		return ruleError(ErrInvalidTime, str)
+		return isProof, ruleError(ErrInvalidTime, str)
 	}
 
 	// Ensure the block time is not too far in the future.
@@ -453,10 +458,10 @@ func checkBlockHeaderSanity(header *wire.BlockHeader, powLimit *big.Int, timeSou
 	if header.Timestamp.After(maxTimestamp) {
 		str := fmt.Sprintf("block timestamp of %v is too far in the "+
 			"future", header.Timestamp)
-		return ruleError(ErrTimeTooNew, str)
+		return isProof, ruleError(ErrTimeTooNew, str)
 	}
 
-	return nil
+	return isProof, nil
 }
 
 // checkBlockSanity performs some preliminary checks on a block to ensure it is
@@ -464,18 +469,22 @@ func checkBlockHeaderSanity(header *wire.BlockHeader, powLimit *big.Int, timeSou
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkBlockHeaderSanity.
-func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
+func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) (bool, error) {
 	msgBlock := block.MsgBlock()
 	header := &msgBlock.Header
-	err := checkBlockHeaderSanity(header, powLimit, timeSource, flags)
+	isProof, err := checkBlockHeaderSanity(header, powLimit, timeSource, flags)
 	if err != nil {
-		return err
+		return false, err
+	}
+
+	if isProof {
+		return true, nil
 	}
 
 	// A block must have at least one transaction.
 	numTx := len(msgBlock.Transactions)
 	if numTx == 0 {
-		return ruleError(ErrNoTransactions, "block does not contain "+
+		return false, ruleError(ErrNoTransactions, "block does not contain "+
 			"any transactions")
 	}
 
@@ -484,7 +493,7 @@ func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 	if numTx > MaxBlockBaseSize {
 		str := fmt.Sprintf("block contains too many transactions - "+
 			"got %d, max %d", numTx, MaxBlockBaseSize)
-		return ruleError(ErrBlockTooBig, str)
+		return false, ruleError(ErrBlockTooBig, str)
 	}
 
 	// A block must not exceed the maximum allowed block payload when
@@ -493,13 +502,13 @@ func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 	if serializedSize > MaxBlockBaseSize {
 		str := fmt.Sprintf("serialized block is too big - got %d, "+
 			"max %d", serializedSize, MaxBlockBaseSize)
-		return ruleError(ErrBlockTooBig, str)
+		return false, ruleError(ErrBlockTooBig, str)
 	}
 
 	// The first transaction in a block must be a coinbase.
 	transactions := block.Transactions()
 	if !IsCoinBase(transactions[0]) {
-		return ruleError(ErrFirstTxNotCoinbase, "first transaction in "+
+		return false, ruleError(ErrFirstTxNotCoinbase, "first transaction in "+
 			"block is not a coinbase")
 	}
 
@@ -508,7 +517,7 @@ func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 		if IsCoinBase(tx) {
 			str := fmt.Sprintf("block contains second coinbase at "+
 				"index %d", i+1)
-			return ruleError(ErrMultipleCoinbases, str)
+			return false, ruleError(ErrMultipleCoinbases, str)
 		}
 	}
 
@@ -517,7 +526,7 @@ func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 	for _, tx := range transactions {
 		err := CheckTransactionSanity(tx)
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 
@@ -533,7 +542,7 @@ func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 		str := fmt.Sprintf("block merkle root is invalid - block "+
 			"header indicates %v, but calculated value is %v",
 			header.MerkleRoot, calculatedMerkleRoot)
-		return ruleError(ErrBadMerkleRoot, str)
+		return false, ruleError(ErrBadMerkleRoot, str)
 	}
 
 	// Check for duplicate transactions.  This check will be fairly quick
@@ -545,7 +554,7 @@ func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 		if _, exists := existingTxHashes[*hash]; exists {
 			str := fmt.Sprintf("block contains duplicate "+
 				"transaction %v", hash)
-			return ruleError(ErrDuplicateTx, str)
+			return false, ruleError(ErrDuplicateTx, str)
 		}
 		existingTxHashes[*hash] = struct{}{}
 	}
@@ -562,16 +571,15 @@ func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 			str := fmt.Sprintf("block contains too many signature "+
 				"operations - got %v, max %v", totalSigOps,
 				MaxBlockSigOpsCost)
-			return ruleError(ErrTooManySigOps, str)
+			return false, ruleError(ErrTooManySigOps, str)
 		}
 	}
-
-	return nil
+	return false, nil
 }
 
 // CheckBlockSanity performs some preliminary checks on a block to ensure it is
 // sane before continuing with block processing.  These checks are context free.
-func CheckBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource MedianTimeSource) error {
+func CheckBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource MedianTimeSource) (bool, error) {
 	return checkBlockSanity(block, powLimit, timeSource, BFNone)
 }
 
@@ -1259,9 +1267,13 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *btcutil.Block) error {
 		return ruleError(ErrPrevBlockNotBest, str)
 	}
 
-	err := checkBlockSanity(block, b.chainParams.PowLimit, b.timeSource, flags)
+	isProof, err := checkBlockSanity(block, b.chainParams.PowLimit, b.timeSource, flags)
 	if err != nil {
 		return err
+	}
+
+	if isProof {
+		return nil
 	}
 
 	err = b.checkBlockContext(block, tip, flags)
