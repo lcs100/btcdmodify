@@ -499,41 +499,33 @@ func (m *CPUMiner) Stop() {
 }
 
 func (m *CPUMiner) Sleep() {
-	log.Infof("Enter Sleep()")
 	m.Lock()
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.MINING1 {
 		//sleep
 		log.Infof("Mining1 -> Sleep")
-		//m.stateChange <- chaincfg.MINING1
-		m.stateChange <- 0
+		m.stateChange <- chaincfg.MINING1
 		atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
 	}
-	log.Infof("Quit Sleep()")
 }
 
 func (m *CPUMiner) Awaken() {
-	log.Infof("Enter Awaken()")
 	m.Lock()
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.SLEEP {
 		log.Infof("Sleep -> Mining1")
-		//m.stateChange <- chaincfg.SLEEP
-		m.stateChange <- -3
+		m.stateChange <- chaincfg.SLEEP
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 	} else if m.minerState == chaincfg.WAIT {
 		log.Infof("Wait -> Mining2")
-		//m.stateChange <- chaincfg.WAIT
-		m.stateChange <- -2
+		m.stateChange <- chaincfg.WAIT
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING2)
 	}
-	log.Infof("Leave Awaken()")
 }
 
 func (m *CPUMiner) Wait() {
-	log.Infof("Enter Wait()")
 	m.Lock()
 	defer m.Unlock()
 
@@ -543,11 +535,9 @@ func (m *CPUMiner) Wait() {
 		m.stateChange <- chaincfg.MINING1
 		atomic.StoreInt32(&m.minerState, chaincfg.WAIT)
 	}
-	log.Infof("Quit Wait()")
 }
 
 func (m *CPUMiner) Restore() {
-	log.Infof("Enter Restore()")
 	m.Lock()
 	defer m.Unlock()
 
@@ -557,7 +547,6 @@ func (m *CPUMiner) Restore() {
 		m.stateChange <- chaincfg.MINING2
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 	}
-	log.Infof("Quit Restore()")
 }
 
 func (m *CPUMiner) MinerType() bool {

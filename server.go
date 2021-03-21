@@ -12,7 +12,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"runtime"
@@ -2495,15 +2494,12 @@ func (s *server) changeState(isProof bool) {
 	} else {
 		state := s.cpuMiner.MinerState()
 		if s.cpuMiner.MinerType() == chaincfg.STRONG {
-			log.Printf("Node Type: Strong; Node state: %d", state)
 			if state == chaincfg.MINING1 {
 				s.cpuMiner.Sleep()
-				log.Print(s.cpuMiner.MinerState())
 			} else if state == chaincfg.SLEEP {
 				s.cpuMiner.Awaken()
 			}
 		} else {
-			log.Printf("Node Type: Weak; Node state: %d", state)
 			if state == chaincfg.MINING1 {
 				s.cpuMiner.Sleep()
 			} else if state == chaincfg.WAIT {
