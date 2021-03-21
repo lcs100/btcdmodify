@@ -480,7 +480,7 @@ func (m *CPUMiner) stateMachine() {
 		case state := <-m.stateChange:
 			log.Info(state)
 		default:
-			
+
 		}
 	}
 }
@@ -502,7 +502,8 @@ func (m *CPUMiner) Start() {
 
 	m.quit = make(chan struct{})
 	m.speedMonitorQuit = make(chan struct{})
-	m.wg.Add(2)
+	m.wg.Add(3)
+	go m.stateMachine()
 	go m.speedMonitor()
 	go m.miningWorkerController()
 
