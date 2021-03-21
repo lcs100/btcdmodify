@@ -477,8 +477,8 @@ out:
 func (m *CPUMiner) stateMachine() {
 	for {
 		select {
-		case state := <-m.stateChange:
-			log.Info(state)
+		case <-m.stateChange:
+			log.Infof("Get state from chan stateChange")
 		default:
 
 		}
@@ -503,6 +503,7 @@ func (m *CPUMiner) Start() {
 	m.quit = make(chan struct{})
 	m.speedMonitorQuit = make(chan struct{})
 	m.wg.Add(3)
+
 	go m.stateMachine()
 	go m.speedMonitor()
 	go m.miningWorkerController()
