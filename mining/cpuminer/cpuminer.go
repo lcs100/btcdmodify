@@ -425,14 +425,18 @@ out:
 				launchWorkers(m.numWorkers)
 
 			case chaincfg.MINING1:
-				for _, quit := range runningWorkers {
+				for i, quit := range runningWorkers {
 					close(quit)
+					runningWorkers[i] = nil
 				}
+				runningWorkers = runningWorkers[:0]
 
 			case chaincfg.MINING2:
-				for _, quit := range runningWorkers {
+				for i, quit := range runningWorkers {
 					close(quit)
+					runningWorkers[i] = nil
 				}
+				runningWorkers = runningWorkers[:0]
 				launchWorkers(m.numWorkers)
 
 			case chaincfg.WAIT:
@@ -441,21 +445,27 @@ out:
 			case chaincfg.MINED:
 				if m.minerType == chaincfg.STRONG {
 					if m.minerState == chaincfg.MINING1 {
-						for _, quit := range runningWorkers {
+						for i, quit := range runningWorkers {
 							close(quit)
+							runningWorkers[i] = nil
 						}
+						runningWorkers = runningWorkers[:0]
 						atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
 					}
 				} else {
 					if m.minerState == chaincfg.MINING1 {
-						for _, quit := range runningWorkers {
+						for i, quit := range runningWorkers {
 							close(quit)
+							runningWorkers[i] = nil
 						}
+						runningWorkers = runningWorkers[:0]
 						atomic.StoreInt32(&m.minerState, chaincfg.WAIT)
 					} else if m.minerState == chaincfg.MINING2 {
-						for _, quit := range runningWorkers {
+						for i, quit := range runningWorkers {
 							close(quit)
+							runningWorkers[i] = nil
 						}
+						runningWorkers = runningWorkers[:0]
 						launchWorkers(m.numWorkers)
 						atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 					}
