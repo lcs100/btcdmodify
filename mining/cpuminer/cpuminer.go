@@ -441,7 +441,7 @@ func (m *CPUMiner) stateMachine() {
 		case <-m.stateChange:
 			log.Infof("Get state from chan stateChange")
 		default:
-			log.Infof("Do not get state from chan stateChange")
+			//log.Infof("Do not get state from chan stateChange")
 
 		}
 	}
