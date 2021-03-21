@@ -543,7 +543,7 @@ func (m *CPUMiner) Sleep() {
 	if m.minerState == chaincfg.MINING1 {
 		//sleep
 		log.Infof("Mining1 -> Sleep")
-		m.stateChange <- chaincfg.MINING1
+		//m.stateChange <- chaincfg.MINING1
 		atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
 	}
 	log.Infof("Quit Sleep()")
@@ -557,11 +557,11 @@ func (m *CPUMiner) Awaken() {
 	if m.minerState == chaincfg.SLEEP {
 		//awaken
 		log.Infof("Sleep -> Mining1")
-		m.stateChange <- chaincfg.SLEEP
+		//m.stateChange <- chaincfg.SLEEP
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 	} else if m.minerState == chaincfg.WAIT {
 		log.Infof("Wait -> Mining2")
-		m.stateChange <- chaincfg.WAIT
+		//m.stateChange <- chaincfg.WAIT
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING2)
 	}
 	log.Infof("Leave Awaken()")
