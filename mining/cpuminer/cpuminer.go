@@ -419,6 +419,50 @@ out:
 				runningWorkers[i] = nil
 				runningWorkers = runningWorkers[:i]
 			}
+		case state := <-m.stateChange:
+			switch state {
+			case chaincfg.SLEEP:
+				launchWorkers(m.numWorkers)
+
+			case chaincfg.MINING1:
+				for _, quit := range runningWorkers {
+					close(quit)
+				}
+
+			case chaincfg.MINING2:
+				for _, quit := range runningWorkers {
+					close(quit)
+				}
+				launchWorkers(m.numWorkers)
+
+			case chaincfg.WAIT:
+				launchWorkers(m.numWorkers)
+
+			case chaincfg.MINED:
+				if m.minerType == chaincfg.STRONG {
+					if m.minerState == chaincfg.MINING1 {
+						for _, quit := range runningWorkers {
+							close(quit)
+						}
+						atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
+					}
+				} else {
+					if m.minerState == chaincfg.MINING1 {
+						for _, quit := range runningWorkers {
+							close(quit)
+						}
+						atomic.StoreInt32(&m.minerState, chaincfg.WAIT)
+					} else if m.minerState == chaincfg.MINING2 {
+						for _, quit := range runningWorkers {
+							close(quit)
+						}
+						launchWorkers(m.numWorkers)
+						atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
+					}
+				}
+
+			default:
+			}
 
 		case <-m.quit:
 			for _, quit := range runningWorkers {
@@ -433,18 +477,6 @@ out:
 	m.workerWg.Wait()
 	close(m.speedMonitorQuit)
 	m.wg.Done()
-}
-
-func (m *CPUMiner) stateMachine() {
-	for {
-		select {
-		case <-m.stateChange:
-			log.Infof("Get state from chan stateChange")
-		default:
-			//log.Infof("Do not get state from chan stateChange")
-
-		}
-	}
 }
 
 // Start begins the CPU mining process as well as the speed monitor used to
@@ -467,7 +499,6 @@ func (m *CPUMiner) Start() {
 	m.speedMonitorQuit = make(chan struct{})
 	m.wg.Add(2)
 
-	go m.stateMachine()
 	go m.speedMonitor()
 	go m.miningWorkerController()
 
