@@ -2494,9 +2494,8 @@ func (s *server) changeState(isProof bool) {
 		//update committee list
 	} else {
 		state := s.cpuMiner.MinerState()
-		log.Printf("enter into state:%d", state)
-		log.Printf("%v", s.cpuMiner.MinerType())
 		if s.cpuMiner.MinerType() == chaincfg.STRONG {
+			log.Printf("Node Type: Strong; Node state: %d", state)
 			if state == chaincfg.MINING1 {
 				s.cpuMiner.Sleep()
 				log.Print(s.cpuMiner.MinerState())
@@ -2504,6 +2503,7 @@ func (s *server) changeState(isProof bool) {
 				s.cpuMiner.Awaken()
 			}
 		} else {
+			log.Printf("Node Type: Weak; Node state: %d", state)
 			if state == chaincfg.MINING1 {
 				s.cpuMiner.Sleep()
 			} else if state == chaincfg.WAIT {

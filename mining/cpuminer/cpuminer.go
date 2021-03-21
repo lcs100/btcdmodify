@@ -474,6 +474,17 @@ out:
 	m.wg.Done()
 }
 
+func (m *CPUMiner) stateMachine() {
+	for {
+		select {
+		case state := <-m.stateChange:
+			log.Info(state)
+		default:
+			
+		}
+	}
+}
+
 // Start begins the CPU mining process as well as the speed monitor used to
 // track hashing metrics.  Calling this function when the CPU miner has
 // already been started will have no effect.
@@ -523,55 +534,63 @@ func (m *CPUMiner) Stop() {
 }
 
 func (m *CPUMiner) Sleep() {
-	log.Infof("enter sleep ")
+	log.Infof("Enter Sleep()")
 	m.Lock()
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.MINING1 {
 		//sleep
-		log.Infof("enter sleep minging1")
+		log.Infof("Mining1 -> Sleep")
 		m.stateChange <- chaincfg.MINING1
 		atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
 	}
+	log.Infof("Quit Sleep()")
 }
 
 func (m *CPUMiner) Awaken() {
-	log.Infof("enter awaken")
+	log.Infof("Enter Awaken()")
 	m.Lock()
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.SLEEP {
 		//awaken
-		log.Infof("enter awaken sleep")
+		log.Infof("Sleep -> Mining1")
 		m.stateChange <- chaincfg.SLEEP
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 	} else if m.minerState == chaincfg.WAIT {
-		log.Infof("enter awaken wait")
+		log.Infof("Wait -> Mining2")
 		m.stateChange <- chaincfg.WAIT
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING2)
 	}
+	log.Infof("Leave Awaken()")
 }
 
 func (m *CPUMiner) Wait() {
+	log.Infof("Enter Wait()")
 	m.Lock()
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.MINING1 {
 		//give up mining2 period and start mining1
+		log.Infof("Mining1 -> Wait")
 		m.stateChange <- chaincfg.MINING1
 		atomic.StoreInt32(&m.minerState, chaincfg.WAIT)
 	}
+	log.Infof("Quit Wait()")
 }
 
 func (m *CPUMiner) Restore() {
+	log.Infof("Enter Restore()")
 	m.Lock()
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.MINING2 {
 		//give up mining2 period and start mining1
+		log.Infof("Mining2 -> Mining1")
 		m.stateChange <- chaincfg.MINING2
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 	}
+	log.Infof("Quit Restore()")
 }
 
 func (m *CPUMiner) MinerType() bool {
