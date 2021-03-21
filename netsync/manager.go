@@ -62,7 +62,7 @@ type newPeerMsg struct {
 type blockMsg struct {
 	block *btcutil.Block
 	peer  *peerpkg.Peer
-	reply chan bool
+	reply chan struct{}
 }
 
 // invMsg packages a bitcoin inv message and the peer it came from together
@@ -190,6 +190,7 @@ type SyncManager struct {
 	msgChan        chan interface{}
 	wg             sync.WaitGroup
 	quit           chan struct{}
+	rcvBlock       chan bool
 
 	// These fields should only be accessed from the blockHandler thread
 	rejectedTxns     map[chainhash.Hash]struct{}
@@ -1337,7 +1338,8 @@ out:
 
 			case *blockMsg:
 				isProof := sm.handleBlockMsg(msg)
-				msg.reply <- isProof
+				msg.reply <- struct{}{}
+				sm.rcvBlock <- isProof
 
 			case *invMsg:
 				sm.handleInvMsg(msg)
@@ -1514,10 +1516,10 @@ func (sm *SyncManager) QueueTx(tx *btcutil.Tx, peer *peerpkg.Peer, done chan str
 // QueueBlock adds the passed block message and peer to the block handling
 // queue. Responds to the done channel argument after the block message is
 // processed.
-func (sm *SyncManager) QueueBlock(block *btcutil.Block, peer *peerpkg.Peer, done chan bool) {
+func (sm *SyncManager) QueueBlock(block *btcutil.Block, peer *peerpkg.Peer, done chan struct{}) {
 	// Don't accept more blocks if we're shutting down.
 	if atomic.LoadInt32(&sm.shutdown) != 0 {
-		done <- false
+		done <- struct{}{}
 		return
 	}
 
@@ -1632,7 +1634,7 @@ func (sm *SyncManager) Pause() chan<- struct{} {
 
 // New constructs a new SyncManager. Use Start to begin processing asynchronous
 // block, tx, and inv updates.
-func New(config *Config) (*SyncManager, error) {
+func New(config *Config, rcvBlock *chan bool) (*SyncManager, error) {
 	sm := SyncManager{
 		peerNotifier:    config.PeerNotifier,
 		chain:           config.Chain,
@@ -1646,6 +1648,7 @@ func New(config *Config) (*SyncManager, error) {
 		msgChan:         make(chan interface{}, config.MaxPeers*3),
 		headerList:      list.New(),
 		quit:            make(chan struct{}),
+		rcvBlock:        *rcvBlock,
 		feeEstimator:    config.FeeEstimator,
 	}
 

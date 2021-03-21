@@ -7,13 +7,11 @@ package main
 
 import (
 	"bytes"
-	"container/list"
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"runtime"
@@ -29,7 +27,6 @@ import (
 	"github.com/btcsuite/btcd/blockchain/indexers"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/committee"
 	"github.com/btcsuite/btcd/connmgr"
 	"github.com/btcsuite/btcd/database"
 	"github.com/btcsuite/btcd/mempool"
@@ -228,6 +225,7 @@ type server struct {
 	peerHeightsUpdate    chan updatePeerHeightsMsg
 	wg                   sync.WaitGroup
 	quit                 chan struct{}
+	rcvBlock             chan bool
 	nat                  NAT
 	db                   database.DB
 	timeSource           blockchain.MedianTimeSource
@@ -282,7 +280,7 @@ type serverPeer struct {
 	quit           chan struct{}
 	// The following chans are used to sync blockmanager and server.
 	txProcessed    chan struct{}
-	blockProcessed chan bool
+	blockProcessed chan struct{}
 }
 
 // newServerPeer returns a new serverPeer instance. The peer needs to be set by
@@ -295,7 +293,7 @@ func newServerPeer(s *server, isPersistent bool) *serverPeer {
 		knownAddresses: make(map[string]struct{}),
 		quit:           make(chan struct{}),
 		txProcessed:    make(chan struct{}, 1),
-		blockProcessed: make(chan bool, 1),
+		blockProcessed: make(chan struct{}, 1),
 	}
 }
 
@@ -589,50 +587,50 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 
 	// release all elements
 	/*
-	var next *list.Element
-	for i := committee.CommitteeList.Front(); i != nil; i = next {
-		next = i.Next()
-		committee.CommitteeList.Remove(i)
-	}
-
-	isProof := <-sp.blockProcessed
-
-	log.Printf("block hash: %s", block.Hash().String())
-	time.Sleep(time.Duration(2) * time.Second)
-
-	if isProof {
-		if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
-			committee.Mutex.Lock()
-			//update committee list
-			for i := committee.CommitteeList.Front(); i != nil; i = i.Next() {
-				if i.Value == sp.Peer.Addr() {
-					return
-				}
-			}
-			committee.CommitteeList.PushBack(sp.Peer.Addr())
-			committee.Mutex.Unlock()
+		var next *list.Element
+		for i := committee.CommitteeList.Front(); i != nil; i = next {
+			next = i.Next()
+			committee.CommitteeList.Remove(i)
 		}
-	} else {
-		if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
-			if sp.server.cpuMiner.MinerState() == chaincfg.MINING1 {
-				sp.server.cpuMiner.Sleep()
-			} else if sp.server.cpuMiner.MinerState() == chaincfg.SLEEP {
-				sp.server.cpuMiner.Awaken()
+
+		isProof := <-sp.blockProcessed
+
+		log.Printf("block hash: %s", block.Hash().String())
+		time.Sleep(time.Duration(2) * time.Second)
+
+		if isProof {
+			if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
+				committee.Mutex.Lock()
+				//update committee list
+				for i := committee.CommitteeList.Front(); i != nil; i = i.Next() {
+					if i.Value == sp.Peer.Addr() {
+						return
+					}
+				}
+				committee.CommitteeList.PushBack(sp.Peer.Addr())
+				committee.Mutex.Unlock()
 			}
 		} else {
-			if sp.server.cpuMiner.MinerState() == chaincfg.MINING1 {
-				sp.server.cpuMiner.Sleep()
-			} else if sp.server.cpuMiner.MinerState() == chaincfg.WAIT {
-				sp.server.cpuMiner.Awaken()
-			} else if sp.server.cpuMiner.MinerState() == chaincfg.MINING2 {
-				sp.server.cpuMiner.Restore()
+			if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
+				if sp.server.cpuMiner.MinerState() == chaincfg.MINING1 {
+					sp.server.cpuMiner.Sleep()
+				} else if sp.server.cpuMiner.MinerState() == chaincfg.SLEEP {
+					sp.server.cpuMiner.Awaken()
+				}
+			} else {
+				if sp.server.cpuMiner.MinerState() == chaincfg.MINING1 {
+					sp.server.cpuMiner.Sleep()
+				} else if sp.server.cpuMiner.MinerState() == chaincfg.WAIT {
+					sp.server.cpuMiner.Awaken()
+				} else if sp.server.cpuMiner.MinerState() == chaincfg.MINING2 {
+					sp.server.cpuMiner.Restore()
 
-				// clear
-			} else if sp.server.cpuMiner.MinerState() == chaincfg.SLEEP {
-				sp.server.cpuMiner.Awaken()
+					// clear
+				} else if sp.server.cpuMiner.MinerState() == chaincfg.SLEEP {
+					sp.server.cpuMiner.Awaken()
+				}
 			}
 		}
-	}
 	*/
 }
 
@@ -2418,6 +2416,7 @@ func (s *server) Start() {
 	// Server startup time. Used for the uptime command for uptime calculation.
 	s.startupTime = time.Now().Unix()
 
+	go s.stateMonitor()
 	// Start the peer handler which in turn starts the address and block
 	// managers.
 	s.wg.Add(1)
@@ -2474,6 +2473,45 @@ func (s *server) Stop() error {
 	// Signal the remaining goroutines to quit.
 	close(s.quit)
 	return nil
+}
+
+func (s *server) stateMonitor() {
+monitor:
+	for {
+		select {
+		case isProof := <-s.rcvBlock:
+			s.changeState(isProof)
+		case <-s.quit:
+			break monitor
+		default:
+		}
+	}
+}
+
+func (s *server) changeState(isProof bool) {
+	if isProof {
+		//update committee list
+	} else {
+		state := s.cpuMiner.MinerState()
+		if s.cpuMiner.MinerType() == chaincfg.STRONG {
+			if state == chaincfg.MINING1 {
+				s.cpuMiner.Sleep()
+			} else if state == chaincfg.SLEEP {
+				s.cpuMiner.Awaken()
+			}
+		} else {
+			if state == chaincfg.MINING1 {
+				s.cpuMiner.Sleep()
+			} else if state == chaincfg.WAIT {
+				s.cpuMiner.Awaken()
+			} else if state == chaincfg.MINING2 {
+				s.cpuMiner.Restore()
+			} else if state == chaincfg.SLEEP {
+				s.cpuMiner.Awaken()
+			}
+		}
+	}
+
 }
 
 // WaitForShutdown blocks until the main listener and peer handlers are stopped.
@@ -2715,6 +2753,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		relayInv:             make(chan relayMsg, cfg.MaxPeers),
 		broadcast:            make(chan broadcastMsg, cfg.MaxPeers),
 		quit:                 make(chan struct{}),
+		rcvBlock:             make(chan bool),
 		modifyRebroadcastInv: make(chan interface{}),
 		peerHeightsUpdate:    make(chan updatePeerHeightsMsg),
 		nat:                  nat,
@@ -2853,7 +2892,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		DisableCheckpoints: cfg.DisableCheckpoints,
 		MaxPeers:           cfg.MaxPeers,
 		FeeEstimator:       s.feeEstimator,
-	})
+	}, &s.rcvBlock)
 	if err != nil {
 		return nil, err
 	}
