@@ -423,17 +423,21 @@ out:
 		case state := <-m.stateChange:
 			switch state {
 			case chaincfg.SLEEP:
+				log.Infof("sleep launch workers")
 				launchWorkers(m.numWorkers)
 
 			case chaincfg.WAIT:
+				log.Infof("wait launch workers")
 				launchWorkers(m.numWorkers)
 
 			case chaincfg.MINING1:
+				log.Infof("mining1 stop workers")
 				for _, quit := range runningWorkers {
 					close(quit)
 				}
 
 			case chaincfg.MINING2:
+				log.Infof("mining2 restore workers")
 				for _, quit := range runningWorkers {
 					close(quit)
 				}
@@ -519,25 +523,30 @@ func (m *CPUMiner) Stop() {
 }
 
 func (m *CPUMiner) Sleep() {
+	log.Infof("enter sleep ")
 	m.Lock()
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.MINING1 {
 		//sleep
+		log.Infof("enter sleep minging1")
 		m.stateChange <- chaincfg.MINING1
 		atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
 	}
 }
 
 func (m *CPUMiner) Awaken() {
+	log.Infof("enter awaken")
 	m.Lock()
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.SLEEP {
 		//awaken
+		log.Infof("enter awaken sleep")
 		m.stateChange <- chaincfg.SLEEP
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 	} else if m.minerState == chaincfg.WAIT {
+		log.Infof("enter awaken wait")
 		m.stateChange <- chaincfg.WAIT
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING2)
 	}

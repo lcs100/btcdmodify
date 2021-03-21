@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"runtime"
@@ -2493,9 +2494,12 @@ func (s *server) changeState(isProof bool) {
 		//update committee list
 	} else {
 		state := s.cpuMiner.MinerState()
+		log.Printf("enter into state:%d", state)
+		log.Printf("%v", s.cpuMiner.MinerType())
 		if s.cpuMiner.MinerType() == chaincfg.STRONG {
 			if state == chaincfg.MINING1 {
 				s.cpuMiner.Sleep()
+				log.Print(s.cpuMiner.MinerState())
 			} else if state == chaincfg.SLEEP {
 				s.cpuMiner.Awaken()
 			}
