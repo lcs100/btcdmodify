@@ -205,7 +205,7 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
 	}
 
-	time.Sleep(time.Duration(2) * time.Second)
+	time.Sleep(time.Duration(20) * time.Second)
 	m.stateChange <- chaincfg.MINED
 	return true
 }
@@ -240,6 +240,10 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 	lastTxUpdate := m.g.TxSource().LastUpdated()
 	hashesCompleted := uint64(0)
 
+	// hashcount
+	hashCount := 0
+	begin := time.Now()
+
 	// Note that the entire extra nonce range is iterated and the offset is
 	// added relying on the fact that overflow will wrap around 0 as
 	// provided by the Go spec.
@@ -253,6 +257,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// periodically checking for early quit and stale block
 		// conditions along with updates to the speed monitor.
 		for i := uint32(0); i <= maxNonce; i++ {
+			hashCount++
 			select {
 			case <-quit:
 				return false
@@ -296,6 +301,11 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			// than the target difficulty.  Yay!
 			if m.minerType == chaincfg.STRONG {
 				if m.minerState == chaincfg.MINING1 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+					elapsed := time.Since(begin)
+					cpu.EnergyPerBlock = hashCount * elapsed
+					cpu.TotalEnergy += cpu.EnergyPerBlock
+					cpu.EnergyPerBlock = 0
+					hashCount = 0
 					m.updateHashes <- hashesCompleted
 					return true
 				}
@@ -304,11 +314,21 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 					proofTargetDifficulty := new(big.Int).Mul(targetDifficulty, big.NewInt(8))
 					proofTargetDifficulty.Div(proofTargetDifficulty, big.NewInt(10))
 					if blockchain.HashToBig(&hash).Cmp(proofTargetDifficulty) <= 0 {
+						elapsed := time.Since(begin)
+						cpu.EnergyPerBlock = hashCount * elapsed
+						cpu.TotalEnergy += cpu.EnergyPerBlock
+						cpu.EnergyPerBlock = 0
+						hashCount = 0
 						m.updateHashes <- hashesCompleted
 						return true
 					}
 				} else if m.minerState == chaincfg.MINING2 {
 					if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+						elapsed := time.Since(begin)
+						cpu.EnergyPerBlock = hashCount * elapsed
+						cpu.TotalEnergy += cpu.EnergyPerBlock
+						cpu.EnergyPerBlock = 0
+						hashCount = 0
 						m.updateHashes <- hashesCompleted
 						return true
 					}
