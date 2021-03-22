@@ -299,6 +299,121 @@ func (b *BlockChain) calcNextRequiredDifficulty(lastNode *blockNode, newBlockTim
 	return newTargetBits, nil
 }
 
+func (b *BlockChain) calcNextRequiredFirstDifficulty(lastNode *blockNode, newBlockTime time.Time) (uint32, error) {
+	if lastNode == nil {
+		return b.chainParams.PowLimitBits, nil
+	}
+
+	if lastNode.height%(b.blocksPerRetarget*2) != 0 {
+		preFirstNode := lastNode.RelativeAncestor(1)
+		if b.chainParams.ReduceMinDifficulty {
+			reductionTime := int64(b.chainParams.MinDiffReductionTime / time.Second)
+			allowTime := preFirstNode.timestamp + reductionTime
+			if newBlockTime.Unix() > allowTime {
+				return b.chainParams.PowLimitBits, nil
+			}
+		}
+		return preFirstNode.bits, nil
+	}
+
+	if lastNode.height == 0 {
+		return b.chainParams.PowLimitBits, nil
+	}
+	preCycleFirstNode := lastNode.RelativeAncestor(b.blocksPerRetarget*2 - 1)
+	preFirstNode := lastNode.RelativeAncestor(1)
+
+	if preCycleFirstNode == nil {
+		return 0, AssertError("unable to obtain previous retarget block for 1st period")
+	}
+
+	actualTimespan := lastNode.timestamp - preCycleFirstNode.timestamp
+	adjustedTimespan := actualTimespan
+	if actualTimespan > b.maxRetargetTimespan {
+		adjustedTimespan = b.maxRetargetTimespan
+	} else if actualTimespan < b.minRetargetTimespan {
+		adjustedTimespan = b.minRetargetTimespan
+	}
+
+	preCycleFirstTarget := CompactToBig(preCycleFirstNode.bits)
+	newFirstTarget := new(big.Int).Mul(preCycleFirstTarget, big.NewInt(adjustedTimespan))
+	targetTimespan := int64(b.chainParams.TargetTimespan / time.Second)
+	newFirstTarget.Div(newFirstTarget, big.NewInt(targetTimespan))
+
+	if newFirstTarget.Cmp(b.chainParams.PowLimit) > 0 {
+		newFirstTarget.Set(b.chainParams.PowLimit)
+	}
+	newFirstTargetBits := BigToCompact(newFirstTarget)
+	log.Debugf("Difficulty retarget at block height %d", lastNode.height+1)
+	log.Debugf("Old target %08x (%064x)", preFirstNode.bits, CompactToBig(preFirstNode.bits))
+	log.Debugf("New target %08x (%064x)", newFirstTargetBits, CompactToBig(newFirstTargetBits))
+	log.Debugf("Actual timespan %v, adjusted timespan %v, target timespan %v",
+		time.Duration(actualTimespan)*time.Second,
+		time.Duration(adjustedTimespan)*time.Second,
+		b.chainParams.TargetTimespan)
+
+	return newFirstTargetBits, nil
+}
+
+func (b *BlockChain) calcNextRequiredSecondDifficulty(lastNode *blockNode, newBlockTime time.Time) (uint32, error) {
+	if lastNode == nil {
+		return 0, AssertError("wrong chain struct when calculating 2nd difficulty")
+	}
+
+	if lastNode.height == 1 {
+		initialSecondTarget := new(big.Int).Mul(b.chainParams.PowLimit, big.NewInt(8))
+		initialSecondTarget.Div(initialSecondTarget, big.NewInt(10))
+		initialSecondTargetBits := BigToCompact(initialSecondTarget)
+		return initialSecondTargetBits, nil
+	}
+
+	preSecondNode := lastNode.RelativeAncestor(1)
+	actualTimespan := lastNode.timestamp - preSecondNode.timestamp
+	adjustedTimespan := actualTimespan
+	if adjustedTimespan > b.maxRetargetTimespan {
+		adjustedTimespan = b.maxRetargetTimespan
+	} else if adjustedTimespan < b.minRetargetTimespan {
+		adjustedTimespan = b.minRetargetTimespan
+	}
+
+	preSecondTarget := CompactToBig(preSecondNode.bits)
+	newSecondTarget := new(big.Int).Mul(preSecondTarget, big.NewInt(adjustedTimespan))
+	targetTimespan := int64(b.chainParams.TargetTimespan / time.Second)
+	newSecondTarget.Div(newSecondTarget, big.NewInt(targetTimespan))
+
+	if newSecondTarget.Cmp(b.chainParams.PowLimit) > 0 {
+		newSecondTarget = b.chainParams.PowLimit
+	}
+	newSecondTargetBits := BigToCompact(newSecondTarget)
+	log.Debugf("Second Difficulty retarget at block height %d", lastNode.height+1)
+	log.Debugf("Old target %08x (%064x)", preSecondNode.bits, preSecondTarget)
+	log.Debugf("New target %08x (%064x)", newSecondTargetBits, CompactToBig(newSecondTargetBits))
+	log.Debugf("Actual timespan %v, adjusted timespan %v, target timespan %v",
+		time.Duration(actualTimespan)*time.Second,
+		time.Duration(adjustedTimespan)*time.Second,
+		b.chainParams.TargetTimespan)
+	return newSecondTargetBits, nil
+}
+
+func (b *BlockChain) calcNextRequiredDifficultyNR(lastNode *blockNode, newBlockTime time.Time) (uint32, error) {
+	if lastNode == nil {
+		return b.chainParams.PowLimitBits, nil
+	}
+
+	//block generated in first period with odd height and even height in second period
+	if lastNode.height%2 == 0 {
+		return b.calcNextRequiredFirstDifficulty(lastNode, newBlockTime)
+	} else {
+		return b.calcNextRequiredSecondDifficulty(lastNode, newBlockTime)
+	}
+}
+
+func (b *BlockChain) CalcNextRequiredDifficultyNR(timestamp time.Time) (uint32, error) {
+	b.chainLock.Lock()
+	difficulty, err := b.calcNextRequiredDifficulty(b.bestChain.Tip(), timestamp)
+	b.chainLock.Unlock()
+	return difficulty, err
+}
+
 // CalcNextRequiredDifficulty calculates the required difficulty for the block
 // after the end of the current best chain based on the difficulty retarget
 // rules.

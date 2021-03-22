@@ -327,11 +327,9 @@ func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags Behavio
 		hash := header.BlockHash()
 		hashNum := HashToBig(&hash)
 
-		var proofTarget, tmp big.Int
-		tmp.Mul(target, big.NewInt(8))
-		proofTarget.Div(&tmp, big.NewInt(10))
-
-		if hashNum.Cmp(&proofTarget) > 0 {
+		proofTarget := new(big.Int).Mul(target, big.NewInt(8))
+		proofTarget.Div(proofTarget, big.NewInt(10))
+		if hashNum.Cmp(proofTarget) > 0 {
 			str := fmt.Sprintf("block hash of %064x is higher than "+
 				"expected max of %064x", hashNum, target)
 			return false, ruleError(ErrHighHash, str)

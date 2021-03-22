@@ -7,6 +7,7 @@ package cpuminer
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"runtime"
 	"sync"
@@ -65,7 +66,7 @@ type Config struct {
 	// ProcessBlock defines the function to call with any solved blocks.
 	// It typically must run the provided block through the same set of
 	// rules and handling as any other block coming from the network.
-	ProcessBlock func(*btcutil.Block, blockchain.BehaviorFlags) (bool, error)
+	ProcessBlock func(*btcutil.Block, blockchain.BehaviorFlags) (bool, bool, error)
 
 	// ConnectedCount defines the function to use to obtain how many other
 	// peers the server is connected to.  This is used by the automatic
@@ -176,7 +177,7 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 
 	// Process this block using the same rules as blocks coming from other
 	// nodes.  This will in turn relay it to the network like normal.
-	isOrphan, err := m.cfg.ProcessBlock(block, blockchain.BFNone)
+	isOrphan, isProof, err := m.cfg.ProcessBlock(block, blockchain.BFNone)
 	if err != nil {
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
@@ -196,10 +197,16 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 
 	// The block was accepted.
 	coinbaseTx := block.MsgBlock().Transactions[0].TxOut[0]
-	log.Infof("Block submitted via CPU miner accepted (hash %s, "+
-		"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+	if isProof {
+		log.Infof("Proof block submitted via CPU miner accepted (hash %s, "+
+			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+	} else {
+		log.Infof("Common block submitted via CPU miner accepted (hash %s, "+
+			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+	}
 
 	time.Sleep(time.Duration(2) * time.Second)
+	m.stateChange <- chaincfg.MINED
 	return true
 }
 
@@ -287,10 +294,27 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 			// The block is solved when the new block hash is less
 			// than the target difficulty.  Yay!
-			if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
-				m.updateHashes <- hashesCompleted
-				return true
+			if m.minerType == chaincfg.STRONG {
+				if m.minerState == chaincfg.MINING1 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+					m.updateHashes <- hashesCompleted
+					return true
+				}
+			} else {
+				if m.minerState == chaincfg.MINING1 {
+					proofTargetDifficulty := new(big.Int).Mul(targetDifficulty, big.NewInt(8))
+					proofTargetDifficulty.Div(proofTargetDifficulty, big.NewInt(10))
+					if blockchain.HashToBig(&hash).Cmp(proofTargetDifficulty) <= 0 {
+						m.updateHashes <- hashesCompleted
+						return true
+					}
+				} else if m.minerState == chaincfg.MINING2 {
+					if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+						m.updateHashes <- hashesCompleted
+						return true
+					}
+				}
 			}
+
 		}
 	}
 
