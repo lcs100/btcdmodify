@@ -314,10 +314,11 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 				}
 			} else {
 				if m.minerState == chaincfg.MINING1 {
-					log.Infof("enter proof weak and find proof")
+					//log.Infof("enter proof weak and find proof")
 					proofTargetDifficulty := new(big.Int).Mul(targetDifficulty, big.NewInt(4))
 					//proofTargetDifficulty.Div(proofTargetDifficulty, big.NewInt(10))
-					if blockchain.HashToBig(&hash).Cmp(proofTargetDifficulty) <= 0 {
+					if blockchain.HashToBig(&hash).Cmp(proofTargetDifficulty) <= 0 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) > 0 {
+						log.Infof("Mining proofTarget: %064x\ttarget: %064x\thash: %064x", proofTargetDifficulty, targetDifficulty, blockchain.HashToBig(&hash))
 						elapsed := time.Since(begin)
 						cpu.EnergyPerBlock = hashCount * int(elapsed)
 						cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
