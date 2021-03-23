@@ -17,6 +17,7 @@ import (
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/cpu"
 	"github.com/btcsuite/btcd/mining"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
@@ -302,8 +303,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			if m.minerType == chaincfg.STRONG {
 				if m.minerState == chaincfg.MINING1 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 					elapsed := time.Since(begin)
-					cpu.EnergyPerBlock = hashCount * elapsed
-					cpu.TotalEnergy += cpu.EnergyPerBlock
+					cpu.EnergyPerBlock = hashCount * int(elapsed)
+					cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
 					cpu.EnergyPerBlock = 0
 					hashCount = 0
 					m.updateHashes <- hashesCompleted
@@ -315,8 +316,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 					proofTargetDifficulty.Div(proofTargetDifficulty, big.NewInt(10))
 					if blockchain.HashToBig(&hash).Cmp(proofTargetDifficulty) <= 0 {
 						elapsed := time.Since(begin)
-						cpu.EnergyPerBlock = hashCount * elapsed
-						cpu.TotalEnergy += cpu.EnergyPerBlock
+						cpu.EnergyPerBlock = hashCount * int(elapsed)
+						cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
 						cpu.EnergyPerBlock = 0
 						hashCount = 0
 						m.updateHashes <- hashesCompleted
@@ -325,8 +326,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 				} else if m.minerState == chaincfg.MINING2 {
 					if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 						elapsed := time.Since(begin)
-						cpu.EnergyPerBlock = hashCount * elapsed
-						cpu.TotalEnergy += cpu.EnergyPerBlock
+						cpu.EnergyPerBlock = hashCount * int(elapsed)
+						cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
 						cpu.EnergyPerBlock = 0
 						hashCount = 0
 						m.updateHashes <- hashesCompleted

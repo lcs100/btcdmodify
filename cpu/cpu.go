@@ -1,4 +1,4 @@
 package cpu
 
-var EnergyPerBlock float64 = 0.0
-var TotalEnergy float64 = 0.0
+var EnergyPerBlock int = 0
+var TotalEnergy int64 = 0
