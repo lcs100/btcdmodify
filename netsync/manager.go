@@ -15,6 +15,7 @@ import (
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/committee"
 	"github.com/btcsuite/btcd/database"
 	"github.com/btcsuite/btcd/mempool"
 	peerpkg "github.com/btcsuite/btcd/peer"
@@ -662,8 +663,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 
-	log.Infof("asdfasdf %s:", bmsg.block.Hash())
-	time.Sleep(time.Duration(2) * time.Second)
+	log.Infof("recevie new block hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
 
 	behaviorFlags := blockchain.BFNone
 	_, isOrphan, isProof, err := sm.chain.ProcessBlock(bmsg.block, behaviorFlags)
@@ -672,6 +672,9 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 	if isProof {
+		committee.Mutex.Lock()
+		committee.CommitteeList.PushBack(peer.Addr())
+		committee.Mutex.Unlock()
 		return true
 	}
 

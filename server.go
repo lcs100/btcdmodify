@@ -584,54 +584,6 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	// the bitcoin block has been fully processed.
 	sp.server.syncManager.QueueBlock(block, sp.Peer, sp.blockProcessed)
 	<-sp.blockProcessed
-
-	// release all elements
-	/*
-		var next *list.Element
-		for i := committee.CommitteeList.Front(); i != nil; i = next {
-			next = i.Next()
-			committee.CommitteeList.Remove(i)
-		}
-
-		isProof := <-sp.blockProcessed
-
-		log.Printf("block hash: %s", block.Hash().String())
-		time.Sleep(time.Duration(2) * time.Second)
-
-		if isProof {
-			if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
-				committee.Mutex.Lock()
-				//update committee list
-				for i := committee.CommitteeList.Front(); i != nil; i = i.Next() {
-					if i.Value == sp.Peer.Addr() {
-						return
-					}
-				}
-				committee.CommitteeList.PushBack(sp.Peer.Addr())
-				committee.Mutex.Unlock()
-			}
-		} else {
-			if sp.server.cpuMiner.MinerType() == chaincfg.STRONG {
-				if sp.server.cpuMiner.MinerState() == chaincfg.MINING1 {
-					sp.server.cpuMiner.Sleep()
-				} else if sp.server.cpuMiner.MinerState() == chaincfg.SLEEP {
-					sp.server.cpuMiner.Awaken()
-				}
-			} else {
-				if sp.server.cpuMiner.MinerState() == chaincfg.MINING1 {
-					sp.server.cpuMiner.Sleep()
-				} else if sp.server.cpuMiner.MinerState() == chaincfg.WAIT {
-					sp.server.cpuMiner.Awaken()
-				} else if sp.server.cpuMiner.MinerState() == chaincfg.MINING2 {
-					sp.server.cpuMiner.Restore()
-
-					// clear
-				} else if sp.server.cpuMiner.MinerState() == chaincfg.SLEEP {
-					sp.server.cpuMiner.Awaken()
-				}
-			}
-		}
-	*/
 }
 
 // OnInv is invoked when a peer receives an inv bitcoin message and is
