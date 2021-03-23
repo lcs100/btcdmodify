@@ -155,22 +155,26 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 	if err != nil {
 		return false, false, false, err
 	}
+	log.Infof("no error")
 	if exists {
 		str := fmt.Sprintf("already have block %v", blockHash)
 		return false, false, false, ruleError(ErrDuplicateBlock, str)
 	}
+	log.Infof("not exist")
 
 	// The block must not already exist as an orphan.
 	if _, exists := b.orphans[*blockHash]; exists {
 		str := fmt.Sprintf("already have block (orphan) %v", blockHash)
 		return false, false, false, ruleError(ErrDuplicateBlock, str)
 	}
+	log.Infof("not orphan")
 
 	// Perform preliminary sanity checks on the block and its transactions.
 	isProof, err = checkBlockSanity(block, b.chainParams.PowLimit, b.timeSource, flags)
 	if err != nil {
 		return false, false, isProof, err
 	}
+	log.Infof("no error 2")
 
 	if isProof {
 		return false, false, isProof, err
