@@ -315,8 +315,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			} else {
 				if m.minerState == chaincfg.MINING1 {
 					log.Infof("enter proof weak and find proof")
-					proofTargetDifficulty := new(big.Int).Mul(targetDifficulty, big.NewInt(8))
-					proofTargetDifficulty.Div(proofTargetDifficulty, big.NewInt(10))
+					proofTargetDifficulty := new(big.Int).Mul(targetDifficulty, big.NewInt(4))
+					//proofTargetDifficulty.Div(proofTargetDifficulty, big.NewInt(10))
 					if blockchain.HashToBig(&hash).Cmp(proofTargetDifficulty) <= 0 {
 						elapsed := time.Since(begin)
 						cpu.EnergyPerBlock = hashCount * int(elapsed)

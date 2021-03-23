@@ -360,8 +360,8 @@ func (b *BlockChain) calcNextRequiredSecondDifficulty(lastNode *blockNode, newBl
 	}
 
 	if lastNode.height == 1 {
-		initialSecondTarget := new(big.Int).Mul(b.chainParams.PowLimit, big.NewInt(8))
-		initialSecondTarget.Div(initialSecondTarget, big.NewInt(10))
+		initialSecondTarget := new(big.Int).Mul(b.chainParams.PowLimit, big.NewInt(4))
+		//initialSecondTarget.Div(initialSecondTarget, big.NewInt(10))
 		initialSecondTargetBits := BigToCompact(initialSecondTarget)
 		return initialSecondTargetBits, nil
 	}
