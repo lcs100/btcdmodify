@@ -155,32 +155,32 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 	if err != nil {
 		return false, false, false, err
 	}
-	log.Infof("Process Block: no error")
+	//log.Infof("Process Block: no error")
 
 	if exists {
 		str := fmt.Sprintf("already have block %v", blockHash)
 		return false, false, false, ruleError(ErrDuplicateBlock, str)
 	}
-	log.Infof("Process Block: not exist")
+	//log.Infof("Process Block: not exist")
 
 	// The block must not already exist as an orphan.
 	if _, exists := b.orphans[*blockHash]; exists {
 		str := fmt.Sprintf("already have block (orphan) %v", blockHash)
 		return false, false, false, ruleError(ErrDuplicateBlock, str)
 	}
-	log.Infof("Process Block: not orphan")
+	//log.Infof("Process Block: not orphan")
 
 	// Perform preliminary sanity checks on the block and its transactions.
 	isProof, err = checkBlockSanity(block, b.chainParams.PowLimit, b.timeSource, flags)
 	if err != nil {
 		return false, false, isProof, err
 	}
-	log.Infof("Process Block: check block sanity no error")
+	//log.Infof("Process Block: check block sanity no error")
 
 	if isProof {
 		return false, false, isProof, err
 	}
-	log.Infof("Process Block: no proof")
+	//log.Infof("Process Block: no proof")
 	// Find the previous checkpoint and perform some additional checks based
 	// on the checkpoint.  This provides a few nice properties such as
 	// preventing old side chain blocks before the last checkpoint,

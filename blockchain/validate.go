@@ -328,7 +328,7 @@ func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags Behavio
 		hashNum := HashToBig(&hash)
 
 		proofTarget := new(big.Int).Mul(target, big.NewInt(4))
-		log.Infof("proofTarget: %064x\ttarget: %064x\thash: %064x", proofTarget, target, hashNum)
+		//log.Infof("proofTarget: %064x\ttarget: %064x\thash: %064x", proofTarget, target, hashNum)
 		//proofTarget.Div(proofTarget, big.NewInt(10))
 		if hashNum.Cmp(proofTarget) > 0 {
 			str := fmt.Sprintf("block hash of %064x is higher than "+

@@ -318,7 +318,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 					proofTargetDifficulty := new(big.Int).Mul(targetDifficulty, big.NewInt(4))
 					//proofTargetDifficulty.Div(proofTargetDifficulty, big.NewInt(10))
 					if blockchain.HashToBig(&hash).Cmp(proofTargetDifficulty) <= 0 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) > 0 {
-						log.Infof("Mining proofTarget: %064x\ttarget: %064x\thash: %064x", proofTargetDifficulty, targetDifficulty, blockchain.HashToBig(&hash))
+						//log.Infof("Mining proofTarget: %064x\ttarget: %064x\thash: %064x", proofTargetDifficulty, targetDifficulty, blockchain.HashToBig(&hash))
 						elapsed := time.Since(begin)
 						cpu.EnergyPerBlock = hashCount * int(elapsed)
 						cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
@@ -500,6 +500,7 @@ out:
 						}
 						runningWorkers = runningWorkers[:0]
 						atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
+						log.Infof("Mining1 -> Sleep")
 					}
 				} else {
 					if m.minerState == chaincfg.MINING1 {
@@ -509,6 +510,7 @@ out:
 						}
 						runningWorkers = runningWorkers[:0]
 						atomic.StoreInt32(&m.minerState, chaincfg.WAIT)
+						log.Infof("Mining1 -> Wait")
 					} else if m.minerState == chaincfg.MINING2 {
 						for i, quit := range runningWorkers {
 							close(quit)
@@ -517,6 +519,7 @@ out:
 						runningWorkers = runningWorkers[:0]
 						launchWorkers(m.numWorkers)
 						atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
+						log.Infof("Mining1 -> Mining2")
 					}
 				}
 
