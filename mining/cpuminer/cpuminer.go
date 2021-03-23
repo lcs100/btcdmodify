@@ -500,7 +500,7 @@ out:
 						}
 						runningWorkers = runningWorkers[:0]
 						atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
-						log.Infof("Mining1 -> Sleep")
+						log.Infof("STRONG: Mining1 -> Sleep")
 					}
 				} else {
 					if m.minerState == chaincfg.MINING1 {
@@ -510,7 +510,7 @@ out:
 						}
 						runningWorkers = runningWorkers[:0]
 						atomic.StoreInt32(&m.minerState, chaincfg.WAIT)
-						log.Infof("Mining1 -> Wait")
+						log.Infof("WEAK: Mining1 -> Wait")
 					} else if m.minerState == chaincfg.MINING2 {
 						for i, quit := range runningWorkers {
 							close(quit)
@@ -519,7 +519,7 @@ out:
 						runningWorkers = runningWorkers[:0]
 						launchWorkers(m.numWorkers)
 						atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
-						log.Infof("Mining1 -> Mining2")
+						log.Infof("WEAK: Mining1 -> Mining2")
 					}
 				}
 
