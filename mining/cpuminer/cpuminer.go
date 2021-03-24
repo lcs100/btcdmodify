@@ -206,7 +206,7 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
 	}
 
-	time.Sleep(time.Duration(20) * time.Second)
+	//time.Sleep(time.Duration(20) * time.Second)
 	m.stateChange <- chaincfg.MINED
 	return true
 }
@@ -302,37 +302,43 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			// than the target difficulty.  Yay!
 			if m.minerType == chaincfg.STRONG {
 				if m.minerState == chaincfg.MINING1 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
-					log.Infof("enter strong and find block")
+					time.Sleep(time.Duration(5) * time.Second)
+					log.Infof("Solve strong block")
 					elapsed := time.Since(begin)
 					cpu.EnergyPerBlock = hashCount * int(elapsed)
 					cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
 					cpu.EnergyPerBlock = 0
+
 					hashCount = 0
 					m.updateHashes <- hashesCompleted
-					time.Sleep(time.Duration(5) * time.Second)
 					return true
 				}
 			} else {
 				if m.minerState == chaincfg.MINING1 {
-					//log.Infof("enter proof weak and find proof")
 					proofTargetDifficulty := new(big.Int).Mul(targetDifficulty, big.NewInt(4))
 					//proofTargetDifficulty.Div(proofTargetDifficulty, big.NewInt(10))
 					if blockchain.HashToBig(&hash).Cmp(proofTargetDifficulty) <= 0 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) > 0 {
+						time.Sleep(time.Duration(5) * time.Second)
+						log.Infof("Solve proof block")
 						//log.Infof("Mining proofTarget: %064x\ttarget: %064x\thash: %064x", proofTargetDifficulty, targetDifficulty, blockchain.HashToBig(&hash))
 						elapsed := time.Since(begin)
 						cpu.EnergyPerBlock = hashCount * int(elapsed)
 						cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
 						cpu.EnergyPerBlock = 0
+
 						hashCount = 0
 						m.updateHashes <- hashesCompleted
 						return true
 					}
 				} else if m.minerState == chaincfg.MINING2 {
 					if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+						time.Sleep(time.Duration(5) * time.Second)
+						log.Infof("Solve weak block")
 						elapsed := time.Since(begin)
 						cpu.EnergyPerBlock = hashCount * int(elapsed)
 						cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
 						cpu.EnergyPerBlock = 0
+
 						hashCount = 0
 						m.updateHashes <- hashesCompleted
 						return true
@@ -414,7 +420,6 @@ out:
 		if m.solveBlock(template.Block, curHeight+1, ticker, quit) {
 			block := btcutil.NewBlock(template.Block)
 			m.submitBlock(block)
-			//commit state change
 		}
 	}
 

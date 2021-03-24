@@ -155,32 +155,24 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 	if err != nil {
 		return false, false, false, err
 	}
-	//log.Infof("Process Block: no error")
 
 	if exists {
 		str := fmt.Sprintf("already have block %v", blockHash)
 		return false, false, false, ruleError(ErrDuplicateBlock, str)
 	}
-	//log.Infof("Process Block: not exist")
 
 	// The block must not already exist as an orphan.
 	if _, exists := b.orphans[*blockHash]; exists {
 		str := fmt.Sprintf("already have block (orphan) %v", blockHash)
 		return false, false, false, ruleError(ErrDuplicateBlock, str)
 	}
-	//log.Infof("Process Block: not orphan")
 
 	// Perform preliminary sanity checks on the block and its transactions.
 	isProof, err = checkBlockSanity(block, b.chainParams.PowLimit, b.timeSource, flags)
 	if err != nil {
 		return false, false, isProof, err
 	}
-	//log.Infof("Process Block: check block sanity no error")
 
-	if isProof {
-		return false, false, isProof, err
-	}
-	//log.Infof("Process Block: no proof")
 	// Find the previous checkpoint and perform some additional checks based
 	// on the checkpoint.  This provides a few nice properties such as
 	// preventing old side chain blocks before the last checkpoint,
@@ -190,7 +182,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 	blockHeader := &block.MsgBlock().Header
 	checkpointNode, err := b.findPreviousCheckpoint()
 	if err != nil {
-		return false, false, false, err
+		return false, false, isProof, err
 	}
 	if checkpointNode != nil {
 		// Ensure the block timestamp is after the checkpoint timestamp.
@@ -199,7 +191,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 			str := fmt.Sprintf("block %v has timestamp %v before "+
 				"last checkpoint timestamp %v", blockHash,
 				blockHeader.Timestamp, checkpointTime)
-			return false, false, false, ruleError(ErrCheckpointTimeTooOld, str)
+			return false, false, isProof, ruleError(ErrCheckpointTimeTooOld, str)
 		}
 		if !fastAdd {
 			// Even though the checks prior to now have already ensured the
@@ -216,7 +208,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 				str := fmt.Sprintf("block target difficulty of %064x "+
 					"is too low when compared to the previous "+
 					"checkpoint", currentTarget)
-				return false, false, false, ruleError(ErrDifficultyTooLow, str)
+				return false, false, isProof, ruleError(ErrDifficultyTooLow, str)
 			}
 		}
 	}
@@ -225,20 +217,20 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 	prevHash := &blockHeader.PrevBlock
 	prevHashExists, err := b.blockExists(prevHash)
 	if err != nil {
-		return false, false, false, err
+		return false, false, isProof, err
 	}
 	if !prevHashExists {
 		log.Infof("Adding orphan block %v with parent %v", blockHash, prevHash)
 		b.addOrphanBlock(block)
 
-		return false, true, false, nil
+		return false, true, isProof, nil
 	}
 
 	// The block has passed all context independent checks and appears sane
 	// enough to potentially accept it into the block chain.
 	isMainChain, err := b.maybeAcceptBlock(block, flags)
 	if err != nil {
-		return false, false, false, err
+		return false, false, isProof, err
 	}
 
 	// Accept any orphan blocks that depend on this block (they are
@@ -251,5 +243,5 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 
 	log.Debugf("Accepted block %v", blockHash)
 
-	return isMainChain, false, false, nil
+	return isMainChain, false, isProof, nil
 }
