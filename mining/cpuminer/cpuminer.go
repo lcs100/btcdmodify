@@ -302,7 +302,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			// than the target difficulty.  Yay!
 			if m.minerType == chaincfg.STRONG {
 				if m.minerState == chaincfg.MINING1 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
-					time.Sleep(time.Duration(5) * time.Second)
+					time.Sleep(time.Duration(20) * time.Second)
 					log.Infof("Solve strong block")
 					elapsed := time.Since(begin)
 					cpu.EnergyPerBlock = hashCount * int(elapsed)
@@ -524,7 +524,7 @@ out:
 						runningWorkers = runningWorkers[:0]
 						launchWorkers(m.numWorkers)
 						atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
-						log.Infof("WEAK: Mining1 -> Mining2")
+						log.Infof("WEAK: Mining2 -> Mining1")
 					}
 				}
 
