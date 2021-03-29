@@ -515,7 +515,7 @@ out:
 						runningWorkers = runningWorkers[:0]
 						time.Sleep(time.Duration(2) * time.Second)
 						atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
-						if cpu.ProofNumber == 2 {
+						if cpu.ProofNumber == int64(cpu.WeakNodes) {
 							cpu.Mutex.Lock()
 							cpu.ProofNumber = 0
 							cpu.Mutex.Unlock()

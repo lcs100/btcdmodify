@@ -2451,7 +2451,7 @@ func (s *server) changeState(isProof bool) {
 			if state == chaincfg.MINING1 {
 				s.cpuMiner.Sleep()
 			} else if state == chaincfg.SLEEP {
-				if cpu.WeakBlocks == 2 {
+				if cpu.WeakBlocks == int64(cpu.WeakNodes) {
 					cpu.Mutex2.Lock()
 					cpu.WeakBlocks = 0
 					cpu.Mutex2.Unlock()
