@@ -648,7 +648,6 @@ func (m *CPUMiner) Restore() {
 
 	if m.minerState == chaincfg.MINING2 {
 		//give up mining2 period and start mining1
-		log.Infof("Mining2 -> Mining1")
 		m.stateChange <- chaincfg.MINING2
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 	}
