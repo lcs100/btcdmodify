@@ -526,9 +526,9 @@ out:
 							runningWorkers[i] = nil
 						}
 						runningWorkers = runningWorkers[:0]
+						time.Sleep(time.Duration(3) * time.Second)
 						atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 						launchWorkers(m.numWorkers)
-						time.Sleep(time.Duration(3) * time.Second)
 						log.Infof("WEAK: Mining2 -> Mining1")
 					}
 				}
