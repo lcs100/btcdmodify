@@ -347,6 +347,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 						m.updateHashes <- hashesCompleted
 						return true
 					}
+				} else if m.minerState == chaincfg.WAIT {
+					continue
 				}
 			}
 
