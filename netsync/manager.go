@@ -15,7 +15,6 @@ import (
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/committee"
 	"github.com/btcsuite/btcd/database"
 	"github.com/btcsuite/btcd/mempool"
 	peerpkg "github.com/btcsuite/btcd/peer"
@@ -663,8 +662,6 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 
-	log.Infof("recevie new block hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
-
 	behaviorFlags := blockchain.BFNone
 	_, isOrphan, isProof, err := sm.chain.ProcessBlock(bmsg.block, behaviorFlags)
 	if err != nil {
@@ -672,11 +669,11 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 	if isProof {
-		committee.Mutex.Lock()
-		committee.CommitteeList.PushBack(peer.Addr())
-		committee.Mutex.Unlock()
+		log.Infof("recevie new proof hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
 		return true
 	}
+
+	log.Infof("recevie new block hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
 
 	// If we didn't ask for this block then the peer is misbehaving.
 	blockHash := bmsg.block.Hash()
