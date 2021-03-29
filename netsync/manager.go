@@ -674,7 +674,6 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		cpu.Mutex.Lock()
 		cpu.ProofNumber++
 		cpu.Mutex.Unlock()
-		log.Infof("recevie new proof hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
 		log.Info("PROOF number", cpu.ProofNumber)
 		return true
 	}
@@ -685,6 +684,12 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		cpu.WeakBlocks++
 		cpu.Mutex2.Unlock()
 		log.Info("weak blocks:", cpu.WeakBlocks)
+	}
+
+	if cpu.Flag == 2 {
+		cpu.Mutex3.Lock()
+		cpu.StrongBlocks++
+		cpu.Mutex3.Unlock()
 	}
 
 	log.Infof("recevie new block hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())

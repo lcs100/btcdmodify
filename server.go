@@ -2463,7 +2463,12 @@ func (s *server) changeState(isProof bool) {
 			}
 		} else {
 			if state == chaincfg.MINING1 {
-				s.cpuMiner.Sleep()
+				if cpu.StrongBlocks == 1 {
+					cpu.Mutex3.Lock()
+					cpu.StrongBlocks = 0
+					cpu.Mutex3.Unlock()
+					s.cpuMiner.Sleep()
+				}
 			} else if state == chaincfg.WAIT {
 				s.cpuMiner.Awaken()
 			} else if state == chaincfg.MINING2 {

@@ -543,6 +543,12 @@ out:
 						time.Sleep(time.Duration(3) * time.Second)
 						atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 						launchWorkers(m.numWorkers)
+						cpu.Mutex3.Lock()
+						cpu.StrongBlocks = 0
+						cpu.Mutex3.Unlock()
+						cpu.Mutex1.Lock()
+						cpu.Flag = 2
+						cpu.Mutex1.Unlock()
 						log.Infof("WEAK: Mining2 -> Mining1")
 					}
 				}
