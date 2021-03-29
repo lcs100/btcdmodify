@@ -515,6 +515,14 @@ out:
 						runningWorkers = runningWorkers[:0]
 						time.Sleep(time.Duration(2) * time.Second)
 						atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
+						if cpu.ProofNumber == 2 {
+							cpu.Mutex.Lock()
+							cpu.ProofNumber = 0
+							cpu.Mutex.Unlock()
+							cpu.Mutex1.Lock()
+							cpu.Flag = 1
+							cpu.Mutex1.Unlock()
+						}
 						log.Infof("STRONG: Mining1 -> Sleep")
 					}
 				} else {
@@ -624,9 +632,6 @@ func (m *CPUMiner) Awaken() {
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.SLEEP {
-		if cpu.ProofNumber != 0 {
-			return
-		}
 		log.Infof("Sleep -> Mining1")
 		m.stateChange <- chaincfg.SLEEP
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)

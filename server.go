@@ -12,7 +12,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"runtime"
@@ -2445,19 +2444,22 @@ monitor:
 func (s *server) changeState(isProof bool) {
 	if isProof {
 		//update proof Numbers
-		cpu.Mutex.Lock()
-		cpu.ProofNumber++
-		cpu.Mutex.Unlock()
+
 	} else {
 		state := s.cpuMiner.MinerState()
 		if s.cpuMiner.MinerType() == chaincfg.STRONG {
 			if state == chaincfg.MINING1 {
-				if cpu.ProofNumber == 2 {
-					log.Println("proof number:", cpu.ProofNumber)
-					s.cpuMiner.Sleep()
-				}
+				s.cpuMiner.Sleep()
 			} else if state == chaincfg.SLEEP {
-				s.cpuMiner.Awaken()
+				if cpu.WeakBlocks == 2 {
+					cpu.Mutex2.Lock()
+					cpu.WeakBlocks = 0
+					cpu.Mutex2.Unlock()
+					cpu.Mutex1.Lock()
+					cpu.Flag = 0
+					cpu.Mutex1.Unlock()
+					s.cpuMiner.Awaken()
+				}
 			}
 		} else {
 			if state == chaincfg.MINING1 {
