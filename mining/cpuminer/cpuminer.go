@@ -521,7 +521,6 @@ out:
 							runningWorkers[i] = nil
 						}
 						runningWorkers = runningWorkers[:0]
-						time.Sleep(time.Duration(2) * time.Second)
 						atomic.StoreInt32(&m.minerState, chaincfg.WAIT)
 						log.Infof("WEAK: Mining1 -> Wait")
 					} else if m.minerState == chaincfg.MINING2 {
@@ -531,7 +530,6 @@ out:
 						}
 						runningWorkers = runningWorkers[:0]
 						launchWorkers(m.numWorkers)
-						time.Sleep(time.Duration(2) * time.Second)
 						atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 						log.Infof("WEAK: Mining2 -> Mining1")
 					}
