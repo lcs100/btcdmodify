@@ -2453,7 +2453,7 @@ func (s *server) changeState(isProof bool) {
 		if s.cpuMiner.MinerType() == chaincfg.STRONG {
 			if state == chaincfg.MINING1 {
 				if cpu.ProofNumber == 2 {
-					log.Infof("proof number:", cpu.ProofNumber)
+					log.Println("proof number:", cpu.ProofNumber)
 					s.cpuMiner.Sleep()
 				}
 			} else if state == chaincfg.SLEEP {
