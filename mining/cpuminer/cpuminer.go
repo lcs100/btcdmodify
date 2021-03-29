@@ -199,11 +199,17 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 	// The block was accepted.
 	coinbaseTx := block.MsgBlock().Transactions[0].TxOut[0]
 	if isProof {
-		log.Infof("Proof block submitted via CPU miner accepted (hash %s, "+
+		log.Infof("Proof submitted via CPU miner accepted (hash %s, "+
 			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
 	} else {
-		log.Infof("Common block submitted via CPU miner accepted (hash %s, "+
-			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+		if m.minerState == chaincfg.MINING1 {
+			log.Infof("strong block submitted via CPU miner accepted (hash %s, "+
+				"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+		}
+		if m.minerState == chaincfg.MINING2 {
+			log.Infof("weak block submitted via CPU miner accepted (hash %s, "+
+				"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+		}
 	}
 
 	// record
