@@ -2872,7 +2872,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		ProcessBlock:           s.syncManager.ProcessBlock,
 		ConnectedCount:         s.ConnectedCount,
 		IsCurrent:              s.syncManager.IsCurrent,
-		MinerType:              chaincfg.STRONG,
+		MinerType:              chaincfg.WEAK,
 		MinerState:             chaincfg.NEW,
 	})
 
