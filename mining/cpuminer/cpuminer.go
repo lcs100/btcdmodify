@@ -202,7 +202,7 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 		log.Infof("Proof submitted via CPU miner accepted (hash %s, "+
 			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
 	} else {
-		if m.minerState == chaincfg.MINING1 {
+		if m.minerState == chaincfg.MINING1 && m.MinerType() == chaincfg.STRONG {
 			log.Infof("strong block submitted via CPU miner accepted (hash %s, "+
 				"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
 		}
