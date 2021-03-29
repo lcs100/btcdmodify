@@ -206,6 +206,9 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
 	}
 
+	// record
+	fmt.Println("energy:", cpu.EnergyPerBlock)
+
 	//time.Sleep(time.Duration(20) * time.Second)
 	m.stateChange <- chaincfg.MINED
 	return true
@@ -308,6 +311,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 					cpu.EnergyPerBlock = hashCount * int(elapsed)
 					cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
 					cpu.EnergyPerBlock = 0
+					fmt.Println("hashcont:", hashCount)
 
 					hashCount = 0
 					m.updateHashes <- hashesCompleted
@@ -323,6 +327,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 						cpu.EnergyPerBlock = hashCount * int(elapsed)
 						cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
 						cpu.EnergyPerBlock = 0
+						fmt.Println("hashcont:", hashCount)
 
 						hashCount = 0
 						m.updateHashes <- hashesCompleted
@@ -336,6 +341,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 						cpu.EnergyPerBlock = hashCount * int(elapsed)
 						cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
 						cpu.EnergyPerBlock = 0
+						fmt.Println("hashcont:", hashCount)
 
 						hashCount = 0
 						m.updateHashes <- hashesCompleted
