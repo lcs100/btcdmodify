@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"runtime"
@@ -28,6 +29,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/connmgr"
+	"github.com/btcsuite/btcd/cpu"
 	"github.com/btcsuite/btcd/database"
 	"github.com/btcsuite/btcd/mempool"
 	"github.com/btcsuite/btcd/mining"
@@ -2442,12 +2444,18 @@ monitor:
 
 func (s *server) changeState(isProof bool) {
 	if isProof {
-		//update committee list
+		//update proof Numbers
+		cpu.Mutex.Lock()
+		cpu.ProofNumber++
+		cpu.Mutex.Unlock()
 	} else {
 		state := s.cpuMiner.MinerState()
 		if s.cpuMiner.MinerType() == chaincfg.STRONG {
 			if state == chaincfg.MINING1 {
-				s.cpuMiner.Sleep()
+				if cpu.ProofNumber == 2 {
+					log.Infof("proof number:", cpu.ProofNumber)
+					s.cpuMiner.Sleep()
+				}
 			} else if state == chaincfg.SLEEP {
 				s.cpuMiner.Awaken()
 			}

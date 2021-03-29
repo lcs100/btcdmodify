@@ -624,6 +624,9 @@ func (m *CPUMiner) Awaken() {
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.SLEEP {
+		if cpu.ProofNumber != 0 {
+			return
+		}
 		log.Infof("Sleep -> Mining1")
 		m.stateChange <- chaincfg.SLEEP
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)

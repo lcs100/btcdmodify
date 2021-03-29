@@ -15,6 +15,7 @@ import (
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/cpu"
 	"github.com/btcsuite/btcd/database"
 	"github.com/btcsuite/btcd/mempool"
 	peerpkg "github.com/btcsuite/btcd/peer"
@@ -669,6 +670,9 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 	if isProof {
+		cpu.Mutex.Lock()
+		cpu.ProofNumber++
+		cpu.Mutex.Unlock()
 		log.Infof("recevie new proof hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
 		return true
 	}
