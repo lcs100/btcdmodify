@@ -14,5 +14,5 @@ var Flag int64 = 0
 var Mutex2 sync.Mutex
 var WeakBlocks int64 = 0
 
-var WeakNodes = 8
+var WeakNodes = 3
 var StrongNodes = 1
