@@ -539,6 +539,7 @@ out:
 							runningWorkers[i] = nil
 						}
 						runningWorkers = runningWorkers[:0]
+						log.Infof("bbbbbbbbbbb")
 						time.Sleep(time.Duration(3) * time.Second)
 						if cpu.StrongBlocks == int64(cpu.StrongNodes) {
 							atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
