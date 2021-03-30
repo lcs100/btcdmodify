@@ -251,8 +251,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 	hashesCompleted := uint64(0)
 
 	// hashcount
-	hashCount := 0
-	begin := time.Now()
+	hashCount := float64(0)
+	begin := float64(time.Now().UnixNano())
 
 	// Note that the entire extra nonce range is iterated and the offset is
 	// added relying on the fact that overflow will wrap around 0 as
@@ -267,7 +267,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// periodically checking for early quit and stale block
 		// conditions along with updates to the speed monitor.
 		for i := uint32(0); i <= maxNonce; i++ {
-			hashCount++
+			hashCount += 1
 			select {
 			case <-quit:
 				return false
@@ -312,10 +312,11 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			proofTargetDifficulty := new(big.Int).Mul(targetDifficulty, big.NewInt(4))
 			if m.minerType == chaincfg.STRONG {
 				if m.minerState == chaincfg.MINING1 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+					end := float64(time.Now().UnixNano())
+					cpu.Duration = (end - begin) / 1e9
+					cpu.EnergyPerBlock = hashCount * cpu.Duration
+					cpu.TotalEnergy += cpu.EnergyPerBlock
 					time.Sleep(time.Duration(20) * time.Second)
-					elapsed := time.Since(begin)
-					cpu.EnergyPerBlock = hashCount * int(elapsed)
-					cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
 					cpu.EnergyPerBlock = 0
 					fmt.Println("hashcont:", hashCount)
 
@@ -326,11 +327,12 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			} else {
 				if m.minerState == chaincfg.MINING1 {
 					if blockchain.HashToBig(&hash).Cmp(proofTargetDifficulty) <= 0 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) > 0 {
-						time.Sleep(time.Duration(5) * time.Second)
-						elapsed := time.Since(begin)
-						cpu.EnergyPerBlock = hashCount * int(elapsed)
-						cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
+						end := float64(time.Now().UnixNano())
+						cpu.Duration = (end - begin) / 1e9
+						cpu.EnergyPerBlock = hashCount * cpu.Duration
+						cpu.TotalEnergy += cpu.EnergyPerBlock
 						cpu.EnergyPerBlock = 0
+						time.Sleep(time.Duration(5) * time.Second)
 						fmt.Println("hashcont:", hashCount)
 
 						hashCount = 0
@@ -340,11 +342,11 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 				} else if m.minerState == chaincfg.MINING2 {
 					weakBlockTargetDifficulty := proofTargetDifficulty
 					if blockchain.HashToBig(&hash).Cmp(weakBlockTargetDifficulty) <= 0 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) > 0 {
-						time.Sleep(time.Duration(5) * time.Second)
-						elapsed := time.Since(begin)
-						cpu.EnergyPerBlock = hashCount * int(elapsed)
-						cpu.TotalEnergy += int64(cpu.EnergyPerBlock)
+						end := float64(time.Now().UnixNano())
+						cpu.Duration = (end - begin) / 1e9
+						cpu.EnergyPerBlock = hashCount * cpu.Duration
 						cpu.EnergyPerBlock = 0
+						time.Sleep(time.Duration(5) * time.Second)
 						fmt.Println("hashcont:", hashCount)
 
 						hashCount = 0
