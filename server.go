@@ -2471,13 +2471,18 @@ func (s *server) changeState(isProof bool) {
 				}
 			} else if state == chaincfg.WAIT {
 				log.Println("WEAK: wait -> mining2")
+				cpu.Mutex3.Lock()
+				cpu.Flag = 3
+				cpu.Mutex3.Unlock()
 				s.cpuMiner.Awaken()
 			} else if state == chaincfg.MINING2 {
-				log.Println("aaaaaaaaa")
 				if cpu.WeakBlocks1 == int64(cpu.WeakNodes) {
 					cpu.Mutex4.Lock()
 					cpu.WeakBlocks1 = 0
 					cpu.Mutex4.Unlock()
+					cpu.Mutex1.Lock()
+					cpu.Flag = 2
+					cpu.Mutex1.Unlock()
 					log.Println("WEAK: minging2 -> minging1")
 					s.cpuMiner.Restore()
 				}

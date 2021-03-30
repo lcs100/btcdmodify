@@ -539,19 +539,10 @@ out:
 							runningWorkers[i] = nil
 						}
 						runningWorkers = runningWorkers[:0]
-						log.Infof("bbbbbbbbbbb")
-						time.Sleep(time.Duration(3) * time.Second)
-						if cpu.StrongBlocks == int64(cpu.StrongNodes) {
-							atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
-							launchWorkers(m.numWorkers)
-							cpu.Mutex3.Lock()
-							cpu.StrongBlocks = 0
-							cpu.Mutex3.Unlock()
-							cpu.Mutex1.Lock()
-							cpu.Flag = 2
-							cpu.Mutex1.Unlock()
-							log.Infof("WEAK: Mining2 -> Mining1")
-						}
+						launchWorkers(m.numWorkers)
+						cpu.Mutex4.Lock()
+						cpu.WeakBlocks1++
+						cpu.Mutex4.Unlock()
 					}
 				}
 
