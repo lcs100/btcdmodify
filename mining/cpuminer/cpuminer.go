@@ -532,6 +532,9 @@ out:
 						}
 						runningWorkers = runningWorkers[:0]
 						atomic.StoreInt32(&m.minerState, chaincfg.WAIT)
+						cpu.Mutex1.Lock()
+						cpu.Flag = 2
+						cpu.Mutex1.Unlock()
 						log.Infof("WEAK: Mining1 -> Wait")
 					} else if m.minerState == chaincfg.MINING2 {
 						for i, quit := range runningWorkers {

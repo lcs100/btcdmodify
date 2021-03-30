@@ -670,7 +670,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 
-	//strong node in mining1
+	//strong node in mining1 and weak node in mining1
 	if isProof && cpu.Flag == 0 {
 		cpu.Mutex.Lock()
 		cpu.ProofNumber++
@@ -684,7 +684,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		cpu.Mutex2.Lock()
 		cpu.WeakBlocks++
 		cpu.Mutex2.Unlock()
-		log.Info("weak blocks:", cpu.WeakBlocks)
+		log.Info("strong: weak blocks:", cpu.WeakBlocks)
 		return false
 	}
 
@@ -693,6 +693,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		cpu.Mutex3.Lock()
 		cpu.StrongBlocks++
 		cpu.Mutex3.Unlock()
+		log.Info("weak: strong blocks:", cpu.StrongBlocks)
 	}
 
 	// weak node in minging2
@@ -700,6 +701,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		cpu.Mutex4.Lock()
 		cpu.WeakBlocks1++
 		cpu.Mutex4.Unlock()
+		log.Info("weak: weak blocks:", cpu.WeakBlocks1)
 	}
 
 	log.Infof("recevie new block hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())

@@ -2481,7 +2481,7 @@ func (s *server) changeState(isProof bool) {
 					cpu.WeakBlocks1 = 0
 					cpu.Mutex4.Unlock()
 					cpu.Mutex1.Lock()
-					cpu.Flag = 2
+					cpu.Flag = 0
 					cpu.Mutex1.Unlock()
 					log.Println("WEAK: minging2 -> minging1")
 					s.cpuMiner.Restore()
