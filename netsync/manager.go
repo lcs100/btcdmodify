@@ -698,11 +698,13 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 				cpu.ProofNumber++
 				cpu.Mutex.Unlock()
 				log.Info("weak: proof numbers:", cpu.ProofNumber)
+				return true
 			} else {
 				cpu.Mutex3.Lock()
 				cpu.StrongBlocks++
 				cpu.Mutex3.Unlock()
 				log.Info("weak: strong blocks:", cpu.StrongBlocks)
+				return false
 			}
 		}
 
@@ -712,6 +714,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 			cpu.WeakBlocks1++
 			cpu.Mutex4.Unlock()
 			log.Info("weak: weak blocks:", cpu.WeakBlocks1)
+			return false
 		}
 	}
 
