@@ -684,6 +684,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		cpu.WeakBlocks++
 		cpu.Mutex2.Unlock()
 		log.Info("weak blocks:", cpu.WeakBlocks)
+		return false
 	}
 
 	if cpu.Flag == 2 {
