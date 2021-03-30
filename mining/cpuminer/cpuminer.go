@@ -531,10 +531,23 @@ out:
 							runningWorkers[i] = nil
 						}
 						runningWorkers = runningWorkers[:0]
+						cpu.Mutex.Lock()
+						cpu.ProofNumber++
+						cpu.Mutex.Unlock()
+						if cpu.ProofNumber == int64(cpu.WeakNodes) && cpu.StrongBlocks == int64(cpu.StrongNodes) {
+							cpu.Mutex.Lock()
+							cpu.ProofNumber = 0
+							cpu.Mutex.Unlock()
+							cpu.Mutex3.Lock()
+							cpu.StrongBlocks = 0
+							cpu.Mutex3.Unlock()
+							cpu.Mutex1.Lock()
+							cpu.Flag = 1
+							cpu.Mutex1.Unlock()
+							atomic.StoreInt32(&m.minerState, chaincfg.MINING2)
+							log.Infof("WEAK: has received enough proofs AND STRONG BLOCKS, minging1 -> mining2")
+						}
 						atomic.StoreInt32(&m.minerState, chaincfg.WAIT)
-						cpu.Mutex1.Lock()
-						cpu.Flag = 2
-						cpu.Mutex1.Unlock()
 						log.Infof("WEAK: Mining1 -> Wait")
 					} else if m.minerState == chaincfg.MINING2 {
 						for i, quit := range runningWorkers {
@@ -546,6 +559,16 @@ out:
 						cpu.Mutex4.Lock()
 						cpu.WeakBlocks1++
 						cpu.Mutex4.Unlock()
+						if cpu.WeakBlocks1 == int64(cpu.WeakNodes) {
+							cpu.Mutex4.Lock()
+							cpu.WeakBlocks1 = 0
+							cpu.Mutex4.Unlock()
+							cpu.Mutex1.Lock()
+							cpu.Flag = 0
+							cpu.Mutex1.Unlock()
+							atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
+							log.Infof("WEAK: has received enough weak BLOCKS, minging2 -> mining1")
+						}
 					}
 				}
 

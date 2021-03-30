@@ -2463,18 +2463,32 @@ func (s *server) changeState(isProof bool) {
 			}
 		} else {
 			if state == chaincfg.MINING1 {
-				if cpu.StrongBlocks == int64(cpu.StrongNodes) {
+				if cpu.ProofNumber == int64(cpu.WeakNodes) && cpu.StrongBlocks == int64(cpu.StrongNodes) {
+					cpu.Mutex.Lock()
+					cpu.ProofNumber = 0
+					cpu.Mutex.Unlock()
 					cpu.Mutex3.Lock()
 					cpu.StrongBlocks = 0
 					cpu.Mutex3.Unlock()
-					s.cpuMiner.Sleep()
+					cpu.Mutex1.Lock()
+					cpu.Flag = 1
+					cpu.Mutex1.Unlock()
+					log.Println("WEAK: has received enough proofs AND STRONG BLOCKS, minging1 -> mining2")
 				}
 			} else if state == chaincfg.WAIT {
-				log.Println("WEAK: wait -> mining2")
-				cpu.Mutex3.Lock()
-				cpu.Flag = 3
-				cpu.Mutex3.Unlock()
-				s.cpuMiner.Awaken()
+				if cpu.ProofNumber == int64(cpu.WeakNodes) && cpu.StrongBlocks == int64(cpu.StrongNodes) {
+					cpu.Mutex.Lock()
+					cpu.ProofNumber = 0
+					cpu.Mutex.Unlock()
+					cpu.Mutex3.Lock()
+					cpu.StrongBlocks = 0
+					cpu.Mutex3.Unlock()
+					cpu.Mutex1.Lock()
+					cpu.Flag = 1
+					cpu.Mutex1.Unlock()
+					log.Println("WEAK: wait -> mining2")
+					s.cpuMiner.Awaken()
+				}
 			} else if state == chaincfg.MINING2 {
 				if cpu.WeakBlocks1 == int64(cpu.WeakNodes) {
 					cpu.Mutex4.Lock()

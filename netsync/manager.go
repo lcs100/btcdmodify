@@ -670,38 +670,49 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 
-	//strong node in mining1 and weak node in mining1
-	if isProof && cpu.Flag == 0 {
-		cpu.Mutex.Lock()
-		cpu.ProofNumber++
-		cpu.Mutex.Unlock()
-		log.Info("PROOF number", cpu.ProofNumber)
-		return true
+	if cpu.Type == 1 {
+		//strong node in mining1 and weak node in mining1
+		if isProof && cpu.Flag == 0 {
+			cpu.Mutex.Lock()
+			cpu.ProofNumber++
+			cpu.Mutex.Unlock()
+			log.Info("PROOF number", cpu.ProofNumber)
+			return true
+		}
+
+		// strong node in sleep
+		if cpu.Flag == 1 {
+			cpu.Mutex2.Lock()
+			cpu.WeakBlocks++
+			cpu.Mutex2.Unlock()
+			log.Info("strong: weak blocks:", cpu.WeakBlocks)
+			return false
+		}
 	}
 
-	// strong node in sleep
-	if cpu.Flag == 1 {
-		cpu.Mutex2.Lock()
-		cpu.WeakBlocks++
-		cpu.Mutex2.Unlock()
-		log.Info("strong: weak blocks:", cpu.WeakBlocks)
-		return false
-	}
+	if cpu.Type == 0 {
+		// weak node in minging1
+		if cpu.Flag == 0 {
+			if isProof {
+				cpu.Mutex3.Lock()
+				cpu.ProofNumber++
+				cpu.Mutex3.Unlock()
+				log.Info("weak: proof numbers:", cpu.ProofNumber)
+			} else {
+				cpu.Mutex3.Lock()
+				cpu.StrongBlocks++
+				cpu.Mutex3.Unlock()
+				log.Info("weak: strong blocks:", cpu.StrongBlocks)
+			}
+		}
 
-	// weak node in minging1
-	if cpu.Flag == 2 {
-		cpu.Mutex3.Lock()
-		cpu.StrongBlocks++
-		cpu.Mutex3.Unlock()
-		log.Info("weak: strong blocks:", cpu.StrongBlocks)
-	}
-
-	// weak node in minging2
-	if cpu.Flag == 3 {
-		cpu.Mutex4.Lock()
-		cpu.WeakBlocks1++
-		cpu.Mutex4.Unlock()
-		log.Info("weak: weak blocks:", cpu.WeakBlocks1)
+		// weak node in minging2
+		if cpu.Flag == 1 {
+			cpu.Mutex4.Lock()
+			cpu.WeakBlocks1++
+			cpu.Mutex4.Unlock()
+			log.Info("weak: weak blocks:", cpu.WeakBlocks1)
+		}
 	}
 
 	log.Infof("recevie new block hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
