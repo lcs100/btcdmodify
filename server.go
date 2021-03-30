@@ -2470,15 +2470,16 @@ func (s *server) changeState(isProof bool) {
 					s.cpuMiner.Sleep()
 				}
 			} else if state == chaincfg.WAIT {
+				log.Println("WEAK: wait -> mining2")
+				s.cpuMiner.Awaken()
+			} else if state == chaincfg.MINING2 {
 				if cpu.WeakBlocks1 == int64(cpu.WeakNodes) {
 					cpu.Mutex4.Lock()
 					cpu.WeakBlocks1 = 0
 					cpu.Mutex4.Unlock()
-					log.Println("WEAK: wait -> minging2")
-					s.cpuMiner.Awaken()
+					log.Println("WEAK: minging2 -> minging1")
+					s.cpuMiner.Restore()
 				}
-			} else if state == chaincfg.MINING2 {
-				s.cpuMiner.Restore()
 			} else if state == chaincfg.SLEEP {
 				s.cpuMiner.Awaken()
 			}
