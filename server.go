@@ -2476,6 +2476,7 @@ func (s *server) changeState(isProof bool) {
 					log.Println("WEAK: has received enough proofs AND STRONG BLOCKS, minging1 -> mining2")
 				}
 			} else if state == chaincfg.WAIT {
+				log.Println("strong number:", cpu.StrongBlocks)
 				if cpu.ProofNumber == int64(cpu.WeakNodes) && cpu.StrongBlocks == int64(cpu.StrongNodes) {
 					cpu.Mutex.Lock()
 					cpu.ProofNumber = 0

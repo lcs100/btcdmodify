@@ -670,7 +670,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 
-	if cpu.Type == 1 {
+	if cpu.Type == 0 {
 		//strong node in mining1 and weak node in mining1
 		if isProof && cpu.Flag == 0 {
 			cpu.Mutex.Lock()
@@ -690,13 +690,13 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		}
 	}
 
-	if cpu.Type == 0 {
+	if cpu.Type == 1 {
 		// weak node in minging1
 		if cpu.Flag == 0 {
 			if isProof {
-				cpu.Mutex3.Lock()
+				cpu.Mutex.Lock()
 				cpu.ProofNumber++
-				cpu.Mutex3.Unlock()
+				cpu.Mutex.Unlock()
 				log.Info("weak: proof numbers:", cpu.ProofNumber)
 			} else {
 				cpu.Mutex3.Lock()
