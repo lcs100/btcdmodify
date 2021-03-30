@@ -19,3 +19,6 @@ var StrongNodes = 1
 
 var Mutex3 sync.Mutex
 var StrongBlocks int64 = 0
+
+var Mutex4 sync.Mutex
+var WeakBlocks1 int64 = 0

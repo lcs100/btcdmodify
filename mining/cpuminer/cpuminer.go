@@ -540,15 +540,17 @@ out:
 						}
 						runningWorkers = runningWorkers[:0]
 						time.Sleep(time.Duration(3) * time.Second)
-						atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
-						launchWorkers(m.numWorkers)
-						cpu.Mutex3.Lock()
-						cpu.StrongBlocks = 0
-						cpu.Mutex3.Unlock()
-						cpu.Mutex1.Lock()
-						cpu.Flag = 2
-						cpu.Mutex1.Unlock()
-						log.Infof("WEAK: Mining2 -> Mining1")
+						if cpu.StrongBlocks == int64(cpu.StrongNodes) {
+							atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
+							launchWorkers(m.numWorkers)
+							cpu.Mutex3.Lock()
+							cpu.StrongBlocks = 0
+							cpu.Mutex3.Unlock()
+							cpu.Mutex1.Lock()
+							cpu.Flag = 2
+							cpu.Mutex1.Unlock()
+							log.Infof("WEAK: Mining2 -> Mining1")
+						}
 					}
 				}
 
@@ -637,11 +639,9 @@ func (m *CPUMiner) Awaken() {
 	defer m.Unlock()
 
 	if m.minerState == chaincfg.SLEEP {
-		log.Infof("Sleep -> Mining1")
 		m.stateChange <- chaincfg.SLEEP
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING1)
 	} else if m.minerState == chaincfg.WAIT {
-		log.Infof("Wait -> Mining2")
 		m.stateChange <- chaincfg.WAIT
 		atomic.StoreInt32(&m.minerState, chaincfg.MINING2)
 	}

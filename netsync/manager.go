@@ -669,6 +669,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		log.Warnf("Failed in processing block %v", bmsg.block.Hash())
 		return false
 	}
+
 	//strong node in mining1
 	if isProof && cpu.Flag == 0 {
 		cpu.Mutex.Lock()
@@ -687,10 +688,18 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 
+	// weak node in minging1
 	if cpu.Flag == 2 {
 		cpu.Mutex3.Lock()
 		cpu.StrongBlocks++
 		cpu.Mutex3.Unlock()
+	}
+
+	// weak node in minging2
+	if cpu.Flag == 3 {
+		cpu.Mutex4.Lock()
+		cpu.WeakBlocks1++
+		cpu.Mutex4.Unlock()
 	}
 
 	log.Infof("recevie new block hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
