@@ -318,7 +318,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 					cpu.Duration = (end - begin) / 1e9
 					cpu.EnergyPerBlock = hashCount * cpu.Duration
 					cpu.TotalEnergy += cpu.EnergyPerBlock
-					time.Sleep(time.Duration(5) * time.Second)
+					time.Sleep(time.Duration(10) * time.Second)
 					cpu.EnergyPerBlock = 0
 					fmt.Println("hashcont:", hashCount)
 					fmt.Println("hashCount2:", hashCount2)
