@@ -252,6 +252,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 	// hashcount
 	hashCount := float64(0)
+	hashCount2 := float64(0)
 	begin := float64(time.Now().UnixNano())
 
 	// Note that the entire extra nonce range is iterated and the offset is
@@ -266,6 +267,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// Search through the entire nonce range for a solution while
 		// periodically checking for early quit and stale block
 		// conditions along with updates to the speed monitor.
+		hashCount2 += 1
 		for i := uint32(0); i <= maxNonce; i++ {
 			hashCount += 1
 			select {
@@ -319,7 +321,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 					time.Sleep(time.Duration(20) * time.Second)
 					cpu.EnergyPerBlock = 0
 					fmt.Println("hashcont:", hashCount)
-
+					fmt.Println("hashCount2:", hashCount2)
+					hashCount2 = 0
 					hashCount = 0
 					m.updateHashes <- hashesCompleted
 					return true
@@ -334,7 +337,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 						cpu.EnergyPerBlock = 0
 						time.Sleep(time.Duration(5) * time.Second)
 						fmt.Println("hashcont:", hashCount)
-
+						fmt.Println("hashCount2:", hashCount2)
+						hashCount2 = 0
 						hashCount = 0
 						m.updateHashes <- hashesCompleted
 						return true
@@ -348,7 +352,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 						cpu.EnergyPerBlock = 0
 						time.Sleep(time.Duration(5) * time.Second)
 						fmt.Println("hashcont:", hashCount)
-
+						fmt.Println("hashCount2:", hashCount2)
+						hashCount2 = 0
 						hashCount = 0
 						m.updateHashes <- hashesCompleted
 						return true
