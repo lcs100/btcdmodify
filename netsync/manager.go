@@ -670,6 +670,10 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		return false
 	}
 
+	log.Infof("recevie new block hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
+	log.Infof("proof or not:", isProof)
+	time.Sleep(time.Duration(1) * time.Second)
+
 	if cpu.Type == 0 {
 		//strong node in mining1 and weak node in mining1
 		if isProof && cpu.Flag == 0 {
@@ -717,8 +721,6 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 			return false
 		}
 	}
-
-	log.Infof("recevie new block hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
 
 	// If we didn't ask for this block then the peer is misbehaving.
 	blockHash := bmsg.block.Hash()

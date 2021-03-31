@@ -2443,7 +2443,6 @@ monitor:
 }
 
 func (s *server) changeState(isProof bool) {
-	log.Println(isProof)
 	if isProof {
 
 	} else {
