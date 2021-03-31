@@ -192,6 +192,7 @@ type SyncManager struct {
 	wg             sync.WaitGroup
 	quit           chan struct{}
 	rcvBlock       chan bool
+	changeToSleep  chan uint32
 
 	// These fields should only be accessed from the blockHandler thread
 	rejectedTxns     map[chainhash.Hash]struct{}
@@ -681,6 +682,9 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 			cpu.ProofNumber++
 			cpu.Mutex.Unlock()
 			log.Info("PROOF number", cpu.ProofNumber)
+			if cpu.ProofNumber == int64(cpu.WeakNodes) {
+				sm.changeToSleep <- 1
+			}
 			return true
 		}
 

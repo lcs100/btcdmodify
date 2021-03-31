@@ -228,6 +228,7 @@ type server struct {
 	wg                   sync.WaitGroup
 	quit                 chan struct{}
 	rcvBlock             chan bool
+	changeToSleep        chan uint32
 	nat                  NAT
 	db                   database.DB
 	timeSource           blockchain.MedianTimeSource
@@ -2435,9 +2436,20 @@ monitor:
 		select {
 		case isProof := <-s.rcvBlock:
 			s.changeState(isProof)
+		case turnToSleep := <-s.changeToSleep:
+			s.strongChangeState(turnToSleep)
 		case <-s.quit:
 			break monitor
 		default:
+		}
+	}
+}
+
+func (s *server) strongChangeState(turnToSleep uint32) {
+	if turnToSleep == 1 {
+		state := s.cpuMiner.MinerState()
+		if state == chaincfg.MINED {
+			s.cpuMiner.Sleep()
 		}
 	}
 }
