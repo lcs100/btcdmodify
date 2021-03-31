@@ -335,10 +335,11 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 						cpu.EnergyPerBlock = hashCount * cpu.Duration
 						cpu.TotalEnergy += cpu.EnergyPerBlock
 						cpu.EnergyPerBlock = 0
-						time.Sleep(time.Duration(2) * time.Second)
 						fmt.Println("bbbb")
 						fmt.Println("hashcont:", hashCount)
 						fmt.Println("hashCount2:", hashCount2)
+						time.Sleep(time.Duration(2) * time.Second)
+
 						hashCount2 = 0
 						hashCount = 0
 						m.updateHashes <- hashesCompleted
@@ -351,10 +352,11 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 						cpu.Duration = (end - begin) / 1e9
 						cpu.EnergyPerBlock = hashCount * cpu.Duration
 						cpu.EnergyPerBlock = 0
-						time.Sleep(time.Duration(2) * time.Second)
 						fmt.Println("ccc")
 						fmt.Println("hashcont:", hashCount)
 						fmt.Println("hashCount2:", hashCount2)
+						time.Sleep(time.Duration(2) * time.Second)
+
 						hashCount2 = 0
 						hashCount = 0
 						m.updateHashes <- hashesCompleted
