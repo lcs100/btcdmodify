@@ -201,21 +201,26 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 	if isProof && m.minerState == chaincfg.MINING1 {
 		log.Infof("Proof submitted via CPU miner accepted (hash %s, "+
 			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+
+		m.stateChange <- chaincfg.MINED
+		return true
 	}
 	if isProof && m.minerState == chaincfg.MINING2 {
 		log.Infof("weak block submitted via CPU miner accepted (hash %s, "+
 			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+
+		m.stateChange <- chaincfg.MINED
+		return true
 	}
 	if !isProof && m.minerState == chaincfg.MINING1 && m.MinerType() == chaincfg.STRONG {
 		log.Infof("strong block submitted via CPU miner accepted (hash %s, "+
 			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+
+		m.stateChange <- chaincfg.MINED
+		return true
 	}
 
-	// record
-	fmt.Println("energy:", cpu.EnergyPerBlock)
-
-	m.stateChange <- chaincfg.MINED
-	return true
+	return false
 }
 
 // solveBlock attempts to find some combination of a nonce, extra nonce, and

@@ -676,14 +676,19 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 	time.Sleep(time.Duration(1) * time.Second)
 
 	if cpu.Type == 0 {
-		//strong node in mining1 and weak node in mining1
+		//strong node in mining1
 		if isProof && cpu.Flag == 0 {
+			if cpu.ProofNumber == int64(cpu.WeakNodes) {
+				return false
+			}
 			cpu.Mutex.Lock()
 			cpu.ProofNumber++
 			cpu.Mutex.Unlock()
 			log.Info("PROOF number", cpu.ProofNumber)
 			if cpu.ProofNumber == int64(cpu.WeakNodes) {
-				log.Infof("asdfsadf")
+				cpu.Mutex1.Lock()
+				cpu.Flag = 1
+				cpu.Mutex1.Unlock()
 				sm.changeToSleep <- 1
 			}
 			return true

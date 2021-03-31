@@ -2437,7 +2437,6 @@ monitor:
 		case isProof := <-s.rcvBlock:
 			s.changeState(isProof)
 		case turnToSleep := <-s.changeToSleep:
-			log.Println("qwerqwer")
 			s.strongChangeState(turnToSleep)
 		case <-s.quit:
 			break monitor
@@ -2452,6 +2451,9 @@ func (s *server) strongChangeState(turnToSleep uint32) {
 		if state == chaincfg.MINED {
 			log.Println("STRONG: mining1 -> sleep")
 			s.cpuMiner.Sleep()
+		}
+		if state == chaincfg.MINING1 {
+			return
 		}
 	}
 }
