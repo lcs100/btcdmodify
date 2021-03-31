@@ -23,6 +23,7 @@ var StrongBlocks int64 = 0
 var Mutex4 sync.Mutex
 var WeakBlocks1 int64 = 0
 
-var Type = 1
+var IsAleadyWeak = 0
+var IsAleadyProof = 0
 
 var Duration float64 = 0.0
