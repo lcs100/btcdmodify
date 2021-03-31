@@ -2437,6 +2437,7 @@ monitor:
 		case isProof := <-s.rcvBlock:
 			s.changeState(isProof)
 		case turnToSleep := <-s.changeToSleep:
+			log.Println("qwerqwer")
 			s.strongChangeState(turnToSleep)
 		case <-s.quit:
 			break monitor
@@ -2761,6 +2762,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		broadcast:            make(chan broadcastMsg, cfg.MaxPeers),
 		quit:                 make(chan struct{}),
 		rcvBlock:             make(chan bool),
+		changeToSleep:        make(chan uint32),
 		modifyRebroadcastInv: make(chan interface{}),
 		peerHeightsUpdate:    make(chan updatePeerHeightsMsg),
 		nat:                  nat,
@@ -2899,7 +2901,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		DisableCheckpoints: cfg.DisableCheckpoints,
 		MaxPeers:           cfg.MaxPeers,
 		FeeEstimator:       s.feeEstimator,
-	}, &s.rcvBlock)
+	}, &s.rcvBlock, &s.changeToSleep)
 	if err != nil {
 		return nil, err
 	}

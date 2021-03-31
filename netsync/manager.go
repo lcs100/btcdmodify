@@ -683,6 +683,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 			cpu.Mutex.Unlock()
 			log.Info("PROOF number", cpu.ProofNumber)
 			if cpu.ProofNumber == int64(cpu.WeakNodes) {
+				log.Infof("asdfsadf")
 				sm.changeToSleep <- 1
 			}
 			return true
@@ -1685,7 +1686,7 @@ func (sm *SyncManager) Pause() chan<- struct{} {
 
 // New constructs a new SyncManager. Use Start to begin processing asynchronous
 // block, tx, and inv updates.
-func New(config *Config, rcvBlock *chan bool) (*SyncManager, error) {
+func New(config *Config, rcvBlock *chan bool, changeToSleep *chan uint32) (*SyncManager, error) {
 	sm := SyncManager{
 		peerNotifier:    config.PeerNotifier,
 		chain:           config.Chain,
@@ -1700,6 +1701,7 @@ func New(config *Config, rcvBlock *chan bool) (*SyncManager, error) {
 		headerList:      list.New(),
 		quit:            make(chan struct{}),
 		rcvBlock:        *rcvBlock,
+		changeToSleep:   *changeToSleep,
 		feeEstimator:    config.FeeEstimator,
 	}
 
