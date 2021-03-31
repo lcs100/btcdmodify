@@ -759,7 +759,7 @@ func (m *CPUMiner) SetNumWorkers(numWorkers int32) {
 	if numWorkers < 0 {
 		m.numWorkers = defaultNumWorkers
 	} else {
-		m.numWorkers = uint32(numWorkers)
+		m.numWorkers = uint32(1)
 	}
 
 	// When the miner is already running, notify the controller about the
