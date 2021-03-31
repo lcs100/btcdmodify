@@ -177,6 +177,7 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 
 	// Process this block using the same rules as blocks coming from other
 	// nodes.  This will in turn relay it to the network like normal.
+
 	isOrphan, isProof, err := m.cfg.ProcessBlock(block, blockchain.BFNone)
 	if err != nil {
 		// Anything other than a rule violation is an unexpected error,
@@ -197,24 +198,22 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 
 	// The block was accepted.
 	coinbaseTx := block.MsgBlock().Transactions[0].TxOut[0]
-	if isProof {
+	if isProof && m.minerState == chaincfg.MINING1 {
 		log.Infof("Proof submitted via CPU miner accepted (hash %s, "+
 			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
-	} else {
-		if m.minerState == chaincfg.MINING1 && m.MinerType() == chaincfg.STRONG {
-			log.Infof("strong block submitted via CPU miner accepted (hash %s, "+
-				"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
-		}
-		if m.minerState == chaincfg.MINING2 {
-			log.Infof("weak block submitted via CPU miner accepted (hash %s, "+
-				"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
-		}
+	}
+	if isProof && m.minerState == chaincfg.MINING2 {
+		log.Infof("weak block submitted via CPU miner accepted (hash %s, "+
+			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
+	}
+	if !isProof && m.minerState == chaincfg.MINING1 && m.MinerType() == chaincfg.STRONG {
+		log.Infof("strong block submitted via CPU miner accepted (hash %s, "+
+			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
 	}
 
 	// record
 	fmt.Println("energy:", cpu.EnergyPerBlock)
 
-	//time.Sleep(time.Duration(20) * time.Second)
 	m.stateChange <- chaincfg.MINED
 	return true
 }
