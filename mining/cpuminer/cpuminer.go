@@ -310,7 +310,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 			// The block is solved when the new block hash is less
 			// than the target difficulty.  Yay!
-			proofTargetDifficulty := new(big.Int).Mul(targetDifficulty, big.NewInt(16))
+			proofTargetDifficulty := new(big.Int).Mul(targetDifficulty, big.NewInt(64))
 			if m.minerType == chaincfg.STRONG {
 				if m.minerState == chaincfg.MINING1 && blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 					end := float64(time.Now().UnixNano())
