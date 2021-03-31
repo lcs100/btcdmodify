@@ -679,6 +679,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		//strong node in mining1
 		if isProof && cpu.Flag == 0 {
 			if cpu.ProofNumber == int64(cpu.WeakNodes) {
+				sm.changeToSleep <- 1
 				return false
 			}
 			cpu.Mutex.Lock()
@@ -686,10 +687,8 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 			cpu.Mutex.Unlock()
 			log.Info("PROOF number", cpu.ProofNumber)
 			if cpu.ProofNumber == int64(cpu.WeakNodes) {
-				cpu.Mutex1.Lock()
-				cpu.Flag = 1
-				cpu.Mutex1.Unlock()
 				sm.changeToSleep <- 1
+				return false
 			}
 			return true
 		}
@@ -708,10 +707,16 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 		// weak node in minging1
 		if cpu.Flag == 0 {
 			if isProof {
+				if cpu.ProofNumber == int64(cpu.WeakNodes) {
+					return false
+				}
 				cpu.Mutex.Lock()
 				cpu.ProofNumber++
 				cpu.Mutex.Unlock()
 				log.Info("weak: proof numbers:", cpu.ProofNumber)
+				if cpu.ProofNumber == int64(cpu.WeakNodes) {
+					return false
+				}
 				return true
 			} else {
 				cpu.Mutex3.Lock()
