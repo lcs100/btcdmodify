@@ -257,7 +257,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 	// hashcount
 	hashCount := float64(0)
-	hashCount2 := float64(0)
 	begin := float64(time.Now().UnixNano())
 
 	// Note that the entire extra nonce range is iterated and the offset is
@@ -272,7 +271,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// Search through the entire nonce range for a solution while
 		// periodically checking for early quit and stale block
 		// conditions along with updates to the speed monitor.
-		hashCount2 += 1
 		for i := uint32(0); i <= maxNonce; i++ {
 			hashCount += 1
 			select {
@@ -323,13 +321,9 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 					cpu.Duration = (end - begin) / 1e9
 					cpu.EnergyPerBlock = hashCount * cpu.Duration
 					cpu.TotalEnergy += cpu.EnergyPerBlock
-					fmt.Println("aaa")
 					fmt.Println("hashcont:", hashCount)
-					fmt.Println("hashCount2:", hashCount2)
 					time.Sleep(time.Duration(3) * time.Second)
 					cpu.EnergyPerBlock = 0
-					hashCount2 = 0
-					hashCount = 0
 					m.updateHashes <- hashesCompleted
 					return true
 				}
@@ -341,13 +335,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 						cpu.EnergyPerBlock = hashCount * cpu.Duration
 						cpu.TotalEnergy += cpu.EnergyPerBlock
 						cpu.EnergyPerBlock = 0
-						fmt.Println("bbbb")
 						fmt.Println("hashcont:", hashCount)
-						fmt.Println("hashCount2:", hashCount2)
 						time.Sleep(time.Duration(2) * time.Second)
-
-						hashCount2 = 0
-						hashCount = 0
 						m.updateHashes <- hashesCompleted
 						return true
 					}
@@ -358,13 +347,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 						cpu.Duration = (end - begin) / 1e9
 						cpu.EnergyPerBlock = hashCount * cpu.Duration
 						cpu.EnergyPerBlock = 0
-						fmt.Println("ccc")
 						fmt.Println("hashcont:", hashCount)
-						fmt.Println("hashCount2:", hashCount2)
 						time.Sleep(time.Duration(2) * time.Second)
-
-						hashCount2 = 0
-						hashCount = 0
 						m.updateHashes <- hashesCompleted
 						return true
 					}
