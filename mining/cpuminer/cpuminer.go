@@ -647,7 +647,6 @@ func (m *CPUMiner) Sleep() {
 
 	if m.minerState == chaincfg.MINING1 {
 		//sleep
-		log.Infof("Mining1 -> Sleep")
 		m.stateChange <- chaincfg.MINING1
 		atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
 	}

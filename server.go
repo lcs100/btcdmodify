@@ -2449,6 +2449,9 @@ func (s *server) strongChangeState(turnToSleep uint32) {
 	if turnToSleep == 1 {
 		state := s.cpuMiner.MinerState()
 		if state == chaincfg.MINING1 && cpu.IsAleadyStrong == 1 {
+			cpu.Mutex1.Lock()
+			cpu.Flag = 1
+			cpu.Mutex1.Unlock()
 			log.Println("STRONG: mining1 -> sleep")
 			s.cpuMiner.Sleep()
 		}
@@ -2469,6 +2472,7 @@ func (s *server) changeState(isProof bool) {
 					cpu.Mutex1.Lock()
 					cpu.Flag = 0
 					cpu.Mutex1.Unlock()
+					cpu.IsAleadyStrong = 0
 					log.Println("STRONG: sleep -> minging1")
 					s.cpuMiner.Awaken()
 				}
