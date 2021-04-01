@@ -672,7 +672,6 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) bool {
 	}
 
 	log.Infof("recevie new block hash %s, from ip %s:", bmsg.block.Hash(), peer.Addr())
-	log.Infof("proof or not:", isProof)
 	time.Sleep(time.Duration(1) * time.Second)
 
 	if cpu.Type == 0 {
