@@ -27,5 +27,6 @@ var Type = 1
 
 var IsAleadyWeak = 0
 var IsAleadyProof = 0
+var IsAleadyStrong = 0
 
 var Duration float64 = 0.0

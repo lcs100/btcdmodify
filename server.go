@@ -2448,13 +2448,9 @@ monitor:
 func (s *server) strongChangeState(turnToSleep uint32) {
 	if turnToSleep == 1 {
 		state := s.cpuMiner.MinerState()
-		if state == chaincfg.MINED {
-			log.Println("aaaaa")
+		if state == chaincfg.MINING1 && cpu.IsAleadyStrong == 1 {
 			log.Println("STRONG: mining1 -> sleep")
 			s.cpuMiner.Sleep()
-		}
-		if state == chaincfg.MINING1 {
-			return
 		}
 	}
 }

@@ -219,6 +219,7 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 			"amount %v)", block.Hash(), btcutil.Amount(coinbaseTx.Value))
 
 		m.stateChange <- chaincfg.MINED
+		cpu.IsAleadyStrong = 1
 		return true
 	}
 
@@ -512,6 +513,7 @@ out:
 							runningWorkers[i] = nil
 						}
 						runningWorkers = runningWorkers[:0]
+
 						if cpu.ProofNumber == int64(cpu.WeakNodes) {
 							atomic.StoreInt32(&m.minerState, chaincfg.SLEEP)
 							cpu.Mutex.Lock()
